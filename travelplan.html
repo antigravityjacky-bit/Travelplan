@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Plan - 旅行規劃</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --google-blue: #1f2937;
+            --google-red: #ea4335;
+            --google-yellow: #fbbc04;
+            --google-green: #34a853;
+            --google-light-gray: #f8f9fa;
+            --google-border: #dadce0;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background-color: var(--google-light-gray);
+            color: var(--google-blue);
+        }
+
+        /* 手機 App 風格 */
+        .phone-frame {
+            max-width: 480px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Status bar */
+        .status-bar {
+            background: white;
+            padding: 8px 20px;
+            border-bottom: 1px solid var(--google-border);
+            font-size: 12px;
+            color: var(--google-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* App header */
+        .app-header {
+            background: linear-gradient(135deg, var(--google-blue) 0%, #111827 100%);
+            color: white;
+            padding: 16px 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        /* 主要內容區域 */
+        .app-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background-color: var(--google-light-gray);
+        }
+
+        .app-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .app-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .app-content::-webkit-scrollbar-thumb {
+            background: var(--google-border);
+            border-radius: 3px;
+        }
+
+        /* 底部導航 */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 0;
+            background: white;
+            border-top: 1px solid var(--google-border);
+            gap: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 12px;
+            font-size: 11px;
+            color: #999;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            background: #f0f0f0;
+            color: var(--google-blue);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        /* 卡片設計 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--google-border);
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
+
+        /* 日期卡片 */
+        .date-card {
+            background: linear-gradient(135deg, var(--google-blue) 0%, #374151 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .date-card .date-day {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .date-card .date-info {
+            text-align: right;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        /* 標題 */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--google-blue);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 按鈕 */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--google-blue) 0%, #374151 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 12px rgba(31, 41, 55, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--google-blue);
+            border: 1px solid var(--google-border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--google-light-gray);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-danger {
+            background: var(--google-red);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        /* 輸入框 */
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--google-blue);
+            margin-bottom: 6px;
+        }
+
+        .input-group input,
+        .input-group textarea,
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--google-border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: var(--google-blue);
+            box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.1);
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* 標籤 */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #0c2d6b;
+        }
+
+        /* 列表項目 */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--google-border);
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item-left {
+            flex: 1;
+        }
+
+        .list-item-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--google-blue);
+        }
+
+        .list-item-desc {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .list-item-right {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .list-item-amount {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--google-blue);
+        }
+
+        /* 空狀態 */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        /* 模態框 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 480px;
+            border-radius: 20px 20px 0 0;
+            padding: 24px;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .modal-footer .btn {
+            flex: 1;
+        }
+
+        /* 統計卡片 */
+        .stat-card {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 6px;
+        }
+
+        .stat-card .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* 色彩標籤 */
+        .color-tag {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        /* 動畫 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 480px) {
+            .phone-frame {
+                border-radius: 0;
+                height: 100vh;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="phone-frame">
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <span>9:41</span>
+                <span>Travel Plan</span>
+                <span>📶 📡 🔋</span>
+            </div>
+
+            <!-- Header -->
+            <div class="app-header">
+                <h1>✈️ Travel Plan</h1>
+            </div>
+
+            <!-- Content Area -->
+            <div class="app-content">
+                <!-- 行程表 Tab -->
+                <div v-if="activeTab === 'itinerary'" class="fade-in">
+                    <div class="section-title">
+                        📅 我的行程
+                    </div>
+
+                    <button @click="showAddItinerary = true" class="btn btn-primary w-full mb-4">
+                        ➕ 新增行程
+                    </button>
+
+                    <div v-if="itineraries.length === 0" class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-text">暫時沒有行程</div>
+                        <button @click="showAddItinerary = true" class="btn btn-primary btn-small">新增行程</button>
+                    </div>
+
+                    <div v-for="item in itineraries" :key="item.id" class="card fade-in">
+                        <div class="date-card">
+                            <div>
+                                <div class="date-day">{{ item.date }}</div>
+                            </div>
+                            <div class="date-info">
+                                <div>{{ item.time }}</div>
+                                <div>{{ item.location }}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <p style="font-size: 14px; margin-bottom: 8px;">{{ item.activity }}</p>
+                            <div style="display: flex; gap: 8px;">
+                                <button @click="editItinerary(item.id)" class="btn btn-secondary btn-small">編輯</button>
+                                <button @click="deleteItinerary(item.id)" class="btn btn-danger btn-small">刪除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 地圖 Tab -->
+                <div v-if="activeTab === 'map'" class="fade-in">
+                    <div class="section-title">
+                        🗺️ 我的地點
+                    </div>
+
+                    <div class="card">
+                        <p style="font-size: 12px; color: #999; margin-bottom: 12px;">
+                            查看你的 Google Maps 清單
+                        </p>
+                        <a href="https://maps.app.goo.gl/z3eiESofpHzQHqRM9" target="_blank" class="btn btn-primary w-full">
+                            🔗 打開 Google Maps
+                        </a>
+                    </div>
+
+                    <div class="section-title" style="margin-top: 20px;">
+                        📍 快速地點
+                    </div>
+
+                    <button @click="showAddLocation = true" class="btn btn-primary w-full mb-4">
+                        ➕ 新增地點
+                    </button>
+
+                    <div v-if="locations.length === 0" class="empty-state">
+                        <div class="empty-state-icon">📍</div>
+                        <div class="empty-state-text">暫時沒有地點</div>
+                    </div>
+
+                    <div v-for="location in locations" :key="location.id" class="card fade-in">
+                        <div class="list-item">
+                            <div class="list-item-left">
+                                <div class="list-item-title">{{ location.name }}</div>
+                                <div class="list-item-desc">{{ location.description }}</div>
+                            </div>
+                            <button @click="deleteLocation(location.id)" class="btn btn-danger btn-small">刪除</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 記帳 Tab -->
+                <div v-if="activeTab === 'expense'" class="fade-in">
+                    <div class="section-title">
+                        💰 旅遊支出
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">總支出</div>
+                        <div class="stat-value">${{ totalExpense.toFixed(2) }}</div>
+                    </div>
+
+                    <button @click="showAddExpense = true" class="btn btn-primary w-full mb-4">
+                        ➕ 新增支出
+                    </button>
+
+                    <div v-if="expenses.length === 0" class="empty-state">
+                        <div class="empty-state-icon">💳</div>
+                        <div class="empty-state-text">暫時沒有支出</div>
+                    </div>
+
+                    <div v-for="expense in expenses" :key="expense.id" class="card fade-in">
+                        <div class="list-item">
+                            <div class="list-item-left">
+                                <div class="list-item-title">{{ expense.category }}</div>
+                                <div class="list-item-desc">
+                                    <span class="badge" 
+                                        :class="{
+                                            'badge-success': expense.paymentMethod === '現金',
+                                            'badge-info': expense.paymentMethod === '信用卡'
+                                        }">
+                                        {{ expense.paymentMethod }}
+                                    </span>
+                                    <span style="margin-left: 8px; color: #999;">{{ expense.paidBy }}</span>
+                                </div>
+                            </div>
+                            <div class="list-item-right">
+                                <div class="list-item-amount" style="color: var(--google-red);">-${{ expense.amount }}</div>
+                                <button @click="deleteExpense(expense.id)" class="btn btn-danger btn-small" style="margin-top: 4px;">刪除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 購物清單 Tab -->
+                <div v-if="activeTab === 'shopping'" class="fade-in">
+                    <div class="section-title">
+                        🛒 購物清單
+                    </div>
+
+                    <button @click="showAddShoppingItem = true" class="btn btn-primary w-full mb-4">
+                        ➕ 新增項目
+                    </button>
+
+                    <div v-if="shoppingList.length === 0" class="empty-state">
+                        <div class="empty-state-icon">🛍️</div>
+                        <div class="empty-state-text">清單是空的</div>
+                    </div>
+
+                    <div v-for="item in shoppingList" :key="item.id" class="card fade-in">
+                        <div class="list-item">
+                            <div class="list-item-left">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input 
+                                        type="checkbox" 
+                                        :checked="item.completed"
+                                        @change="toggleShoppingItem(item.id)"
+                                        style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span :style="{ 
+                                        textDecoration: item.completed ? 'line-through' : 'none',
+                                        color: item.completed ? '#999' : 'var(--google-blue)'
+                                    }" class="list-item-title">
+                                        {{ item.name }}
+                                    </span>
+                                </div>
+                                <div class="list-item-desc" v-if="item.note">{{ item.note }}</div>
+                            </div>
+                            <button @click="deleteShoppingItem(item.id)" class="btn btn-danger btn-small">刪除</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="bottom-nav">
+                <div 
+                    @click="activeTab = 'itinerary'"
+                    :class="['nav-item', { active: activeTab === 'itinerary' }]">
+                    <div class="nav-icon">📅</div>
+                    <div>行程</div>
+                </div>
+                <div 
+                    @click="activeTab = 'map'"
+                    :class="['nav-item', { active: activeTab === 'map' }]">
+                    <div class="nav-icon">🗺️</div>
+                    <div>地圖</div>
+                </div>
+                <div 
+                    @click="activeTab = 'expense'"
+                    :class="['nav-item', { active: activeTab === 'expense' }]">
+                    <div class="nav-icon">💰</div>
+                    <div>支出</div>
+                </div>
+                <div 
+                    @click="activeTab = 'shopping'"
+                    :class="['nav-item', { active: activeTab === 'shopping' }]">
+                    <div class="nav-icon">🛒</div>
+                    <div>購物</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增行程模態框 -->
+        <div v-if="showAddItinerary" class="modal" @click.self="showAddItinerary = false">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>新增行程</h2>
+                    <button class="modal-close" @click="showAddItinerary = false">✕</button>
+                </div>
+
+                <div class="input-group">
+                    <label>日期</label>
+                    <input type="date" v-model="newItinerary.date" placeholder="選擇日期">
+                </div>
+
+                <div class="input-group">
+                    <label>時間</label>
+                    <input type="time" v-model="newItinerary.time" placeholder="選擇時間">
+                </div>
+
+                <div class="input-group">
+                    <label>地點</label>
+                    <input type="text" v-model="newItinerary.location" placeholder="例：東京塔">
+                </div>
+
+                <div class="input-group">
+                    <label>活動描述</label>
+                    <textarea v-model="newItinerary.activity" placeholder="例：登塔看夜景"></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button @click="showAddItinerary = false" class="btn btn-secondary">取消</button>
+                    <button @click="addItinerary" class="btn btn-primary">新增</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增支出模態框 -->
+        <div v-if="showAddExpense" class="modal" @click.self="showAddExpense = false">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>新增支出</h2>
+                    <button class="modal-close" @click="showAddExpense = false">✕</button>
+                </div>
+
+                <div class="input-group">
+                    <label>分類</label>
+                    <input type="text" v-model="newExpense.category" placeholder="例：食物、交通">
+                </div>
+
+                <div class="input-group">
+                    <label>金額 ($)</label>
+                    <input type="number" v-model.number="newExpense.amount" placeholder="0.00" step="0.01">
+                </div>
+
+                <div class="input-group">
+                    <label>支付方式</label>
+                    <select v-model="newExpense.paymentMethod">
+                        <option value="">選擇支付方式</option>
+                        <option value="現金">💵 現金</option>
+                        <option value="信用卡">💳 信用卡</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>由誰支付</label>
+                    <input type="text" v-model="newExpense.paidBy" placeholder="例：我、朋友名字">
+                </div>
+
+                <div class="modal-footer">
+                    <button @click="showAddExpense = false" class="btn btn-secondary">取消</button>
+                    <button @click="addExpense" class="btn btn-primary">新增</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增購物項目模態框 -->
+        <div v-if="showAddShoppingItem" class="modal" @click.self="showAddShoppingItem = false">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>新增購物項目</h2>
+                    <button class="modal-close" @click="showAddShoppingItem = false">✕</button>
+                </div>
+
+                <div class="input-group">
+                    <label>項目名稱</label>
+                    <input type="text" v-model="newShoppingItem.name" placeholder="例：日本糖果">
+                </div>
+
+                <div class="input-group">
+                    <label>備註（可選）</label>
+                    <input type="text" v-model="newShoppingItem.note" placeholder="例：澀谷">
+                </div>
+
+                <div class="modal-footer">
+                    <button @click="showAddShoppingItem = false" class="btn btn-secondary">取消</button>
+                    <button @click="addShoppingItem" class="btn btn-primary">新增</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增地點模態框 -->
+        <div v-if="showAddLocation" class="modal" @click.self="showAddLocation = false">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>新增地點</h2>
+                    <button class="modal-close" @click="showAddLocation = false">✕</button>
+                </div>
+
+                <div class="input-group">
+                    <label>地點名稱</label>
+                    <input type="text" v-model="newLocation.name" placeholder="例：東京塔">
+                </div>
+
+                <div class="input-group">
+                    <label>描述</label>
+                    <input type="text" v-model="newLocation.description" placeholder="例：夜景必去">
+                </div>
+
+                <div class="modal-footer">
+                    <button @click="showAddLocation = false" class="btn btn-secondary">取消</button>
+                    <button @click="addLocation" class="btn btn-primary">新增</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    activeTab: 'itinerary',
+                    itineraries: [],
+                    expenses: [],
+                    shoppingList: [],
+                    locations: [],
+                    showAddItinerary: false,
+                    showAddExpense: false,
+                    showAddShoppingItem: false,
+                    showAddLocation: false,
+                    newItinerary: {
+                        date: '',
+                        time: '',
+                        location: '',
+                        activity: ''
+                    },
+                    newExpense: {
+                        category: '',
+                        amount: 0,
+                        paymentMethod: '',
+                        paidBy: ''
+                    },
+                    newShoppingItem: {
+                        name: '',
+                        note: ''
+                    },
+                    newLocation: {
+                        name: '',
+                        description: ''
+                    }
+                }
+            },
+            computed: {
+                totalExpense() {
+                    return this.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+                }
+            },
+            methods: {
+                addItinerary() {
+                    if (this.newItinerary.date && this.newItinerary.time && this.newItinerary.location) {
+                        this.itineraries.push({
+                            id: Date.now(),
+                            ...this.newItinerary
+                        });
+                        this.newItinerary = {
+                            date: '',
+                            time: '',
+                            location: '',
+                            activity: ''
+                        };
+                        this.showAddItinerary = false;
+                        this.saveToLocalStorage();
+                    }
+                },
+                editItinerary(id) {
+                    alert('編輯功能即將推出');
+                },
+                deleteItinerary(id) {
+                    this.itineraries = this.itineraries.filter(item => item.id !== id);
+                    this.saveToLocalStorage();
+                },
+                addExpense() {
+                    if (this.newExpense.category && this.newExpense.amount && this.newExpense.paymentMethod && this.newExpense.paidBy) {
+                        this.expenses.push({
+                            id: Date.now(),
+                            ...this.newExpense
+                        });
+                        this.newExpense = {
+                            category: '',
+                            amount: 0,
+                            paymentMethod: '',
+                            paidBy: ''
+                        };
+                        this.showAddExpense = false;
+                        this.saveToLocalStorage();
+                    }
+                },
+                deleteExpense(id) {
+                    this.expenses = this.expenses.filter(item => item.id !== id);
+                    this.saveToLocalStorage();
+                },
+                addShoppingItem() {
+                    if (this.newShoppingItem.name) {
+                        this.shoppingList.push({
+                            id: Date.now(),
+                            ...this.newShoppingItem,
+                            completed: false
+                        });
+                        this.newShoppingItem = {
+                            name: '',
+                            note: ''
+                        };
+                        this.showAddShoppingItem = false;
+                        this.saveToLocalStorage();
+                    }
+                },
+                deleteShoppingItem(id) {
+                    this.shoppingList = this.shoppingList.filter(item => item.id !== id);
+                    this.saveToLocalStorage();
+                },
+                toggleShoppingItem(id) {
+                    const item = this.shoppingList.find(i => i.id === id);
+                    if (item) {
+                        item.completed = !item.completed;
+                        this.saveToLocalStorage();
+                    }
+                },
+                addLocation() {
+                    if (this.newLocation.name) {
+                        this.locations.push({
+                            id: Date.now(),
+                            ...this.newLocation
+                        });
+                        this.newLocation = {
+                            name: '',
+                            description: ''
+                        };
+                        this.showAddLocation = false;
+                        this.saveToLocalStorage();
+                    }
+                },
+                deleteLocation(id) {
+                    this.locations = this.locations.filter(item => item.id !== id);
+                    this.saveToLocalStorage();
+                },
+                saveToLocalStorage() {
+                    const data = {
+                        itineraries: this.itineraries,
+                        expenses: this.expenses,
+                        shoppingList: this.shoppingList,
+                        locations: this.locations
+                    };
+                    localStorage.setItem('travelPlanData', JSON.stringify(data));
+                },
+                loadFromLocalStorage() {
+                    const data = localStorage.getItem('travelPlanData');
+                    if (data) {
+                        const parsed = JSON.parse(data);
+                        this.itineraries = parsed.itineraries || [];
+                        this.expenses = parsed.expenses || [];
+                        this.shoppingList = parsed.shoppingList || [];
+                        this.locations = parsed.locations || [];
+                    }
+                }
+            },
+            mounted() {
+                this.loadFromLocalStorage();
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
