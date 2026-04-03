@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Plan - 旅行規劃</title>
+    <title>Travel Plan - 紐西蘭之旅</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -141,29 +143,6 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
         }
 
-        /* 日期卡片 */
-        .date-card {
-            background: linear-gradient(135deg, var(--google-blue) 0%, #374151 100%);
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .date-card .date-day {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .date-card .date-info {
-            text-align: right;
-            font-size: 12px;
-            opacity: 0.9;
-        }
-
         /* 標題 */
         .section-title {
             font-size: 16px;
@@ -223,6 +202,19 @@
             opacity: 0.9;
         }
 
+        .w-full {
+            width: 100%;
+        }
+
+        /* 地圖容器 */
+        #map {
+            width: 100%;
+            height: 400px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
         /* 輸入框 */
         .input-group {
             margin-bottom: 12px;
@@ -275,26 +267,21 @@
             color: #065f46;
         }
 
-        .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .badge-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
         .badge-info {
             background: #dbeafe;
             color: #0c2d6b;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
         }
 
         /* 列表項目 */
         .list-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             padding: 12px 0;
             border-bottom: 1px solid var(--google-border);
         }
@@ -309,25 +296,33 @@
 
         .list-item-title {
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             color: var(--google-blue);
+            margin-bottom: 4px;
         }
 
         .list-item-desc {
             font-size: 12px;
             color: #999;
-            margin-top: 4px;
+            line-height: 1.4;
         }
 
         .list-item-right {
             text-align: right;
+            margin-left: 12px;
             white-space: nowrap;
         }
 
-        .list-item-amount {
-            font-size: 14px;
+        .rating {
+            font-size: 12px;
             font-weight: 600;
             color: var(--google-blue);
+        }
+
+        .rating-stars {
+            color: var(--google-yellow);
+            font-size: 14px;
+            margin-right: 4px;
         }
 
         /* 空狀態 */
@@ -367,6 +362,8 @@
             border-radius: 20px 20px 0 0;
             padding: 24px;
             animation: slideUp 0.3s ease;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         @keyframes slideUp {
@@ -429,16 +426,6 @@
             font-weight: bold;
         }
 
-        /* 色彩標籤 */
-        .color-tag {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 6px;
-            vertical-align: middle;
-        }
-
         /* 動畫 */
         @keyframes fadeIn {
             from {
@@ -453,6 +440,21 @@
 
         .fade-in {
             animation: fadeIn 0.3s ease;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* Leaflet custom styles */
+        .leaflet-container {
+            font-family: 'Segoe UI', 'Roboto';
         }
 
         /* 響應式設計 */
@@ -477,7 +479,7 @@
 
             <!-- Header -->
             <div class="app-header">
-                <h1>✈️ Travel Plan</h1>
+                <h1>✈️ 紐西蘭之旅</h1>
             </div>
 
             <!-- Content Area -->
@@ -488,7 +490,11 @@
                         📅 我的行程
                     </div>
 
-                    <button @click="showAddItinerary = true" class="btn btn-primary w-full mb-4">
+                    <div v-if="saveMessage" class="success-message">
+                        ✓ 數據已自動保存
+                    </div>
+
+                    <button @click="showAddItinerary = true" class="btn btn-primary w-full" style="margin-bottom: 16px;">
                         ➕ 新增行程
                     </button>
 
@@ -498,61 +504,55 @@
                         <button @click="showAddItinerary = true" class="btn btn-primary btn-small">新增行程</button>
                     </div>
 
-                    <div v-for="item in itineraries" :key="item.id" class="card fade-in">
-                        <div class="date-card">
+                    <div v-for="item in sortedItineraries" :key="item.id" class="card fade-in">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                             <div>
-                                <div class="date-day">{{ item.date }}</div>
+                                <div style="font-size: 18px; font-weight: bold; color: var(--google-blue);">{{ formatDate(item.date) }}</div>
+                                <div style="font-size: 12px; color: #999;">{{ item.time }}</div>
                             </div>
-                            <div class="date-info">
-                                <div>{{ item.time }}</div>
-                                <div>{{ item.location }}</div>
-                            </div>
+                            <button @click="deleteItinerary(item.id)" class="btn btn-danger btn-small">刪除</button>
                         </div>
-                        <div style="margin-top: 12px;">
-                            <p style="font-size: 14px; margin-bottom: 8px;">{{ item.activity }}</p>
-                            <div style="display: flex; gap: 8px;">
-                                <button @click="editItinerary(item.id)" class="btn btn-secondary btn-small">編輯</button>
-                                <button @click="deleteItinerary(item.id)" class="btn btn-danger btn-small">刪除</button>
-                            </div>
-                        </div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--google-blue); margin-bottom: 6px;">📍 {{ item.location }}</div>
+                        <p style="font-size: 13px; color: #666; line-height: 1.5;">{{ item.activity }}</p>
                     </div>
                 </div>
 
                 <!-- 地圖 Tab -->
                 <div v-if="activeTab === 'map'" class="fade-in">
                     <div class="section-title">
-                        🗺️ 我的地點
+                        🗺️ 紐西蘭景點地圖
                     </div>
 
-                    <div class="card">
-                        <p style="font-size: 12px; color: #999; margin-bottom: 12px;">
-                            查看你的 Google Maps 清單
-                        </p>
-                        <a href="https://maps.app.goo.gl/z3eiESofpHzQHqRM9" target="_blank" class="btn btn-primary w-full">
-                            🔗 打開 Google Maps
-                        </a>
+                    <div v-if="saveMessage" class="success-message">
+                        ✓ 地點已保存
                     </div>
 
-                    <div class="section-title" style="margin-top: 20px;">
-                        📍 快速地點
+                    <div id="map"></div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">已標記景點</div>
+                        <div class="stat-value">{{ locations.length }} 個</div>
                     </div>
 
-                    <button @click="showAddLocation = true" class="btn btn-primary w-full mb-4">
-                        ➕ 新增地點
-                    </button>
-
-                    <div v-if="locations.length === 0" class="empty-state">
-                        <div class="empty-state-icon">📍</div>
-                        <div class="empty-state-text">暫時沒有地點</div>
+                    <div class="section-title">
+                        📍 景點清單
                     </div>
 
-                    <div v-for="location in locations" :key="location.id" class="card fade-in">
+                    <div v-for="location in locations" :key="location.name" class="card fade-in">
                         <div class="list-item">
                             <div class="list-item-left">
                                 <div class="list-item-title">{{ location.name }}</div>
-                                <div class="list-item-desc">{{ location.description }}</div>
+                                <div class="list-item-desc">
+                                    <div v-if="location.category" style="margin-bottom: 6px;">
+                                        <span class="badge badge-info">{{ location.category }}</span>
+                                    </div>
+                                    <div v-if="location.rating" style="margin-bottom: 6px;">
+                                        <span class="rating-stars">⭐</span><span class="rating">{{ location.rating }}</span>
+                                        <span style="color: #999; font-size: 12px;"> ({{ location.reviews }})</span>
+                                    </div>
+                                    <div v-if="location.notes">{{ location.notes }}</div>
+                                </div>
                             </div>
-                            <button @click="deleteLocation(location.id)" class="btn btn-danger btn-small">刪除</button>
                         </div>
                     </div>
                 </div>
@@ -563,12 +563,16 @@
                         💰 旅遊支出
                     </div>
 
-                    <div class="stat-card">
-                        <div class="stat-label">總支出</div>
-                        <div class="stat-value">${{ totalExpense.toFixed(2) }}</div>
+                    <div v-if="saveMessage" class="success-message">
+                        ✓ 數據已自動保存
                     </div>
 
-                    <button @click="showAddExpense = true" class="btn btn-primary w-full mb-4">
+                    <div class="stat-card">
+                        <div class="stat-label">總支出</div>
+                        <div class="stat-value">NZ${{ totalExpense.toFixed(2) }}</div>
+                    </div>
+
+                    <button @click="showAddExpense = true" class="btn btn-primary w-full" style="margin-bottom: 16px;">
                         ➕ 新增支出
                     </button>
 
@@ -582,19 +586,21 @@
                             <div class="list-item-left">
                                 <div class="list-item-title">{{ expense.category }}</div>
                                 <div class="list-item-desc">
-                                    <span class="badge" 
-                                        :class="{
-                                            'badge-success': expense.paymentMethod === '現金',
-                                            'badge-info': expense.paymentMethod === '信用卡'
-                                        }">
-                                        {{ expense.paymentMethod }}
-                                    </span>
-                                    <span style="margin-left: 8px; color: #999;">{{ expense.paidBy }}</span>
+                                    <div>
+                                        <span class="badge" 
+                                            :class="{
+                                                'badge-success': expense.paymentMethod === '現金',
+                                                'badge-info': expense.paymentMethod === '信用卡'
+                                            }">
+                                            {{ expense.paymentMethod }}
+                                        </span>
+                                        <span style="margin-left: 8px; color: #999;">👤 {{ expense.paidBy }}</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="list-item-right">
-                                <div class="list-item-amount" style="color: var(--google-red);">-${{ expense.amount }}</div>
-                                <button @click="deleteExpense(expense.id)" class="btn btn-danger btn-small" style="margin-top: 4px;">刪除</button>
+                                <div class="rating" style="color: var(--google-red); font-size: 14px;">-NZ${{ expense.amount.toFixed(2) }}</div>
+                                <button @click="deleteExpense(expense.id)" class="btn btn-danger btn-small" style="margin-top: 6px;">刪除</button>
                             </div>
                         </div>
                     </div>
@@ -606,7 +612,11 @@
                         🛒 購物清單
                     </div>
 
-                    <button @click="showAddShoppingItem = true" class="btn btn-primary w-full mb-4">
+                    <div v-if="saveMessage" class="success-message">
+                        ✓ 數據已自動保存
+                    </div>
+
+                    <button @click="showAddShoppingItem = true" class="btn btn-primary w-full" style="margin-bottom: 16px;">
                         ➕ 新增項目
                     </button>
 
@@ -631,7 +641,7 @@
                                         {{ item.name }}
                                     </span>
                                 </div>
-                                <div class="list-item-desc" v-if="item.note">{{ item.note }}</div>
+                                <div class="list-item-desc" v-if="item.note" style="margin-top: 6px;">{{ item.note }}</div>
                             </div>
                             <button @click="deleteShoppingItem(item.id)" class="btn btn-danger btn-small">刪除</button>
                         </div>
@@ -688,12 +698,12 @@
 
                 <div class="input-group">
                     <label>地點</label>
-                    <input type="text" v-model="newItinerary.location" placeholder="例：東京塔">
+                    <input type="text" v-model="newItinerary.location" placeholder="例：皇后鎮">
                 </div>
 
                 <div class="input-group">
                     <label>活動描述</label>
-                    <textarea v-model="newItinerary.activity" placeholder="例：登塔看夜景"></textarea>
+                    <textarea v-model="newItinerary.activity" placeholder="例：蹦極跳、遊湖"></textarea>
                 </div>
 
                 <div class="modal-footer">
@@ -713,11 +723,19 @@
 
                 <div class="input-group">
                     <label>分類</label>
-                    <input type="text" v-model="newExpense.category" placeholder="例：食物、交通">
+                    <select v-model="newExpense.category">
+                        <option value="">選擇分類</option>
+                        <option value="食物">🍜 食物</option>
+                        <option value="交通">🚗 交通</option>
+                        <option value="住宿">🏨 住宿</option>
+                        <option value="購物">🛍️ 購物</option>
+                        <option value="門票">🎫 門票</option>
+                        <option value="其他">📌 其他</option>
+                    </select>
                 </div>
 
                 <div class="input-group">
-                    <label>金額 ($)</label>
+                    <label>金額 (NZ$)</label>
                     <input type="number" v-model.number="newExpense.amount" placeholder="0.00" step="0.01">
                 </div>
 
@@ -752,12 +770,12 @@
 
                 <div class="input-group">
                     <label>項目名稱</label>
-                    <input type="text" v-model="newShoppingItem.name" placeholder="例：日本糖果">
+                    <input type="text" v-model="newShoppingItem.name" placeholder="例：紐西蘭蜂蜜">
                 </div>
 
                 <div class="input-group">
                     <label>備註（可選）</label>
-                    <input type="text" v-model="newShoppingItem.note" placeholder="例：澀谷">
+                    <input type="text" v-model="newShoppingItem.note" placeholder="例：皇后鎮">
                 </div>
 
                 <div class="modal-footer">
@@ -766,35 +784,274 @@
                 </div>
             </div>
         </div>
-
-        <!-- 新增地點模態框 -->
-        <div v-if="showAddLocation" class="modal" @click.self="showAddLocation = false">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>新增地點</h2>
-                    <button class="modal-close" @click="showAddLocation = false">✕</button>
-                </div>
-
-                <div class="input-group">
-                    <label>地點名稱</label>
-                    <input type="text" v-model="newLocation.name" placeholder="例：東京塔">
-                </div>
-
-                <div class="input-group">
-                    <label>描述</label>
-                    <input type="text" v-model="newLocation.description" placeholder="例：夜景必去">
-                </div>
-
-                <div class="modal-footer">
-                    <button @click="showAddLocation = false" class="btn btn-secondary">取消</button>
-                    <button @click="addLocation" class="btn btn-primary">新增</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script>
         const { createApp } = Vue;
+
+        // 紐西蘭景點座標數據
+        const nzLocations = [
+            {
+                name: "Blue Penguins Pukekura",
+                category: "野生動物保護區",
+                rating: 4.8,
+                reviews: 746,
+                lat: -45.21662,
+                lng: 170.24996,
+                notes: "小藍企鵝保護區"
+            },
+            {
+                name: "Opuke Thermal Pools & Spa",
+                category: "Leisure center",
+                rating: 4.6,
+                reviews: 1403,
+                lat: -38.37516,
+                lng: 176.24917,
+                notes: ""
+            },
+            {
+                name: "Mount Cook Airport",
+                category: "機場",
+                rating: 4.7,
+                reviews: 98,
+                lat: -43.3897,
+                lng: 170.1829,
+                notes: ""
+            },
+            {
+                name: "Te Kano Estate",
+                category: "釀酒廠",
+                rating: 4.8,
+                reviews: 140,
+                lat: -43.5953,
+                lng: 169.1642,
+                notes: ""
+            },
+            {
+                name: "Dark Sky Project",
+                category: "旅遊景點",
+                rating: 4.4,
+                reviews: 2223,
+                lat: -44.0352,
+                lng: 169.0289,
+                notes: "觀星聖地"
+            },
+            {
+                name: "Astro Cafe",
+                category: "咖啡店",
+                rating: 4.2,
+                reviews: 1238,
+                lat: -44.0354,
+                lng: 169.0272,
+                notes: "NZ$10-20"
+            },
+            {
+                name: "Playground at the lake",
+                category: "遊樂場",
+                rating: 4.9,
+                reviews: 31,
+                lat: -44.4062,
+                lng: 169.6075,
+                notes: ""
+            },
+            {
+                name: "好牧羊人教堂",
+                category: "教堂",
+                rating: 4.6,
+                reviews: 6352,
+                lat: -43.8065,
+                lng: 170.5126,
+                notes: "Lake Tekapo 必去景點"
+            },
+            {
+                name: "Shamarra Alpacas",
+                category: "旅遊景點",
+                rating: 4.9,
+                reviews: 680,
+                lat: -44.2893,
+                lng: 169.2419,
+                notes: "羊駝牧場"
+            },
+            {
+                name: "Whale Watch Kaikoura",
+                category: "旅遊景點",
+                rating: 4.6,
+                reviews: 4612,
+                lat: -42.4108,
+                lng: 173.6866,
+                notes: "觀鯨活動"
+            },
+            {
+                name: "Patagonia Chocolates",
+                category: "冰淇淋",
+                rating: 4.5,
+                reviews: 4093,
+                lat: -44.9650,
+                lng: 168.3498,
+                notes: "$$"
+            },
+            {
+                name: "Cookie Time Bakery",
+                category: "餅乾",
+                rating: 4.5,
+                reviews: 1180,
+                lat: -43.5305,
+                lng: 172.6362,
+                notes: "$"
+            },
+            {
+                name: "Caroline Bay",
+                category: "海灣",
+                rating: 4.7,
+                reviews: 37,
+                lat: -44.3065,
+                lng: 171.2052,
+                notes: "海邊度假勝地"
+            },
+            {
+                name: "Ōamaru Penguins",
+                category: "旅遊景點",
+                rating: 4.3,
+                reviews: 3156,
+                lat: -45.1077,
+                lng: 171.2044,
+                notes: "企鵝觀看"
+            },
+            {
+                name: "Castle Hill",
+                category: "景點",
+                lat: -43.2,
+                lng: 171.5,
+                notes: "石灰岩地形"
+            },
+            {
+                name: "奇異鳥鳥類生態公園",
+                category: "野生動物保護區",
+                rating: 4.5,
+                reviews: 1940,
+                lat: -41.0082,
+                lng: 175.2475,
+                notes: "Rotorua"
+            },
+            {
+                name: "箭鎮",
+                category: "景點",
+                lat: -44.9283,
+                lng: 168.8346,
+                notes: "秋天楓葉景觀"
+            },
+            {
+                name: "Glenorchy Restored Steamship Depot",
+                category: "歷史建築",
+                rating: 4.8,
+                reviews: 74,
+                lat: -44.6850,
+                lng: 168.7189,
+                notes: "Red Shed"
+            },
+            {
+                name: "Glenorchy Wharf & Viewpoint",
+                category: "景點",
+                rating: 4.7,
+                reviews: 3112,
+                lat: -44.6883,
+                lng: 168.7247,
+                notes: ""
+            },
+            {
+                name: "瓦卡蒂普湖",
+                category: "湖泊",
+                rating: 4.8,
+                reviews: 598,
+                lat: -44.9167,
+                lng: 168.7333,
+                notes: "Lake Wakatipu"
+            },
+            {
+                name: "Hooker Valley track",
+                category: "步道",
+                lat: -43.7408,
+                lng: 170.1783,
+                notes: "庫克山步道"
+            },
+            {
+                name: "庫克山",
+                category: "山峰",
+                lat: -43.5950,
+                lng: 170.1835,
+                notes: "紐西蘭最高峰"
+            },
+            {
+                name: "Skyline Queenstown",
+                category: "旅遊景點",
+                rating: 4.6,
+                reviews: 13338,
+                lat: -44.9378,
+                lng: 168.7423,
+                notes: "纜車"
+            },
+            {
+                name: "Lake Tekapo",
+                category: "湖泊",
+                lat: -43.8961,
+                lng: 170.4671,
+                notes: "絕美蒂卡波湖"
+            },
+            {
+                name: "Onsen Hot Pools and Day Spa",
+                category: "水療中心",
+                rating: 4.7,
+                reviews: 4161,
+                lat: -44.0354,
+                lng: 169.0272,
+                notes: ""
+            },
+            {
+                name: "Hot Tubs Omarama",
+                category: "水療中心",
+                rating: 4.6,
+                reviews: 926,
+                lat: -44.4062,
+                lng: 169.6075,
+                notes: ""
+            },
+            {
+                name: "Deer Park Heights Queenstown",
+                category: "旅遊景點",
+                rating: 4.6,
+                reviews: 751,
+                lat: -44.9506,
+                lng: 168.6928,
+                notes: ""
+            },
+            {
+                name: "Tasman Glacier",
+                category: "冰川",
+                rating: 4.7,
+                reviews: 89,
+                lat: -43.4533,
+                lng: 170.1778,
+                notes: ""
+            },
+            {
+                name: "Perky's - Floating Bar Queenstown",
+                category: "酒吧",
+                rating: 4.8,
+                reviews: 539,
+                lat: -44.9318,
+                lng: 168.7423,
+                notes: "NZ$10-20"
+            },
+            {
+                name: "Lake Wakatipu Viewpoint",
+                category: "景點",
+                rating: 4.8,
+                reviews: 498,
+                lat: -44.9167,
+                lng: 168.7500,
+                notes: ""
+            }
+        ];
 
         createApp({
             data() {
@@ -803,11 +1060,13 @@
                     itineraries: [],
                     expenses: [],
                     shoppingList: [],
-                    locations: [],
+                    locations: nzLocations,
                     showAddItinerary: false,
                     showAddExpense: false,
                     showAddShoppingItem: false,
-                    showAddLocation: false,
+                    saveMessage: false,
+                    map: null,
+                    markers: [],
                     newItinerary: {
                         date: '',
                         time: '',
@@ -823,16 +1082,17 @@
                     newShoppingItem: {
                         name: '',
                         note: ''
-                    },
-                    newLocation: {
-                        name: '',
-                        description: ''
                     }
                 }
             },
             computed: {
                 totalExpense() {
-                    return this.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+                    return this.expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+                },
+                sortedItineraries() {
+                    return this.itineraries.sort((a, b) => {
+                        return new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time);
+                    });
                 }
             },
             methods: {
@@ -849,21 +1109,21 @@
                             activity: ''
                         };
                         this.showAddItinerary = false;
+                        this.showSaveMessage();
                         this.saveToLocalStorage();
                     }
                 },
-                editItinerary(id) {
-                    alert('編輯功能即將推出');
-                },
                 deleteItinerary(id) {
                     this.itineraries = this.itineraries.filter(item => item.id !== id);
+                    this.showSaveMessage();
                     this.saveToLocalStorage();
                 },
                 addExpense() {
                     if (this.newExpense.category && this.newExpense.amount && this.newExpense.paymentMethod && this.newExpense.paidBy) {
                         this.expenses.push({
                             id: Date.now(),
-                            ...this.newExpense
+                            ...this.newExpense,
+                            amount: parseFloat(this.newExpense.amount)
                         });
                         this.newExpense = {
                             category: '',
@@ -872,11 +1132,13 @@
                             paidBy: ''
                         };
                         this.showAddExpense = false;
+                        this.showSaveMessage();
                         this.saveToLocalStorage();
                     }
                 },
                 deleteExpense(id) {
                     this.expenses = this.expenses.filter(item => item.id !== id);
+                    this.showSaveMessage();
                     this.saveToLocalStorage();
                 },
                 addShoppingItem() {
@@ -891,55 +1153,86 @@
                             note: ''
                         };
                         this.showAddShoppingItem = false;
+                        this.showSaveMessage();
                         this.saveToLocalStorage();
                     }
                 },
                 deleteShoppingItem(id) {
                     this.shoppingList = this.shoppingList.filter(item => item.id !== id);
+                    this.showSaveMessage();
                     this.saveToLocalStorage();
                 },
                 toggleShoppingItem(id) {
                     const item = this.shoppingList.find(i => i.id === id);
                     if (item) {
                         item.completed = !item.completed;
+                        this.showSaveMessage();
                         this.saveToLocalStorage();
                     }
-                },
-                addLocation() {
-                    if (this.newLocation.name) {
-                        this.locations.push({
-                            id: Date.now(),
-                            ...this.newLocation
-                        });
-                        this.newLocation = {
-                            name: '',
-                            description: ''
-                        };
-                        this.showAddLocation = false;
-                        this.saveToLocalStorage();
-                    }
-                },
-                deleteLocation(id) {
-                    this.locations = this.locations.filter(item => item.id !== id);
-                    this.saveToLocalStorage();
                 },
                 saveToLocalStorage() {
                     const data = {
                         itineraries: this.itineraries,
                         expenses: this.expenses,
-                        shoppingList: this.shoppingList,
-                        locations: this.locations
+                        shoppingList: this.shoppingList
                     };
                     localStorage.setItem('travelPlanData', JSON.stringify(data));
                 },
                 loadFromLocalStorage() {
                     const data = localStorage.getItem('travelPlanData');
                     if (data) {
-                        const parsed = JSON.parse(data);
-                        this.itineraries = parsed.itineraries || [];
-                        this.expenses = parsed.expenses || [];
-                        this.shoppingList = parsed.shoppingList || [];
-                        this.locations = parsed.locations || [];
+                        try {
+                            const parsed = JSON.parse(data);
+                            this.itineraries = parsed.itineraries || [];
+                            this.expenses = parsed.expenses || [];
+                            this.shoppingList = parsed.shoppingList || [];
+                        } catch (e) {
+                            console.error('LocalStorage 讀取錯誤:', e);
+                        }
+                    }
+                },
+                showSaveMessage() {
+                    this.saveMessage = true;
+                    setTimeout(() => {
+                        this.saveMessage = false;
+                    }, 2000);
+                },
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' });
+                },
+                initMap() {
+                    // 設置地圖中心為紐西蘭中心
+                    this.map = L.map('map').setView([-41.2865, 172.9988], 6);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 19
+                    }).addTo(this.map);
+
+                    // 添加所有標記
+                    this.locations.forEach((location, index) => {
+                        if (location.lat && location.lng) {
+                            const marker = L.marker([location.lat, location.lng])
+                                .addTo(this.map)
+                                .bindPopup(`
+                                    <strong>${location.name}</strong><br>
+                                    ${location.category}<br>
+                                    ${location.rating ? '⭐ ' + location.rating + ' (' + location.reviews + ')' : ''}
+                                `);
+                            this.markers.push(marker);
+                        }
+                    });
+                }
+            },
+            watch: {
+                activeTab(newTab) {
+                    if (newTab === 'map') {
+                        this.$nextTick(() => {
+                            if (!this.map) {
+                                this.initMap();
+                            }
+                        });
                     }
                 }
             },
