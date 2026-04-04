@@ -6,6 +6,8 @@
   <title>✈️ 紐西蘭之旅 2026</title>
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <style>
     :root {
       --g-blue:   #4285F4;
@@ -436,6 +438,44 @@
     /* ── Fade transition ── */
     .fade-enter-active, .fade-leave-active { transition: opacity .2s; }
     .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+    /* ── Sync badge ── */
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background .2s;
+    }
+    .sync-badge:hover { background: rgba(255,255,255,.28); }
+
+    /* ── Setup step list ── */
+    .setup-step {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--g-border);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .setup-step:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      background: var(--g-blue);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
   </style>
 </head>
 <body>
@@ -453,6 +493,10 @@
     <div class="appheader">
       <h1>🌿 紐西蘭之旅</h1>
       <p>31 May – 9 Jun 2026 · Christchurch &amp; South Island</p>
+      <div class="sync-badge" @click="showSyncModal=true">
+        <span>{{ syncStatusIcon }}</span>
+        <span>{{ syncStatusLabel }}</span>
+      </div>
     </div>
 
     <!-- Toast -->
@@ -893,6 +937,78 @@
   </div>
   </transition>
 
+  <!-- ══ MODAL: 雲端同步設定 ══ -->
+  <transition name="fade">
+  <div v-if="showSyncModal" class="modal-overlay" @click.self="showSyncModal=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>☁️ 雲端同步設定</h2>
+        <button class="modal-close" @click="showSyncModal=false">✕</button>
+      </div>
+
+      <!-- Current status -->
+      <div style="text-align:center; padding:10px 0 14px; border-bottom:1px solid var(--g-border); margin-bottom:14px;">
+        <div style="font-size:28px;">{{ syncStatusIcon }}</div>
+        <div style="font-size:14px; font-weight:700; color:var(--g-dark); margin-top:4px;">{{ syncStatusLabel }}</div>
+        <div v-if="syncStatusDetail" style="font-size:11px; color:var(--g-mid); margin-top:2px;">{{ syncStatusDetail }}</div>
+      </div>
+
+      <!-- Input section -->
+      <div class="sec-title" style="margin-top:0;">📋 輸入 Firebase 設定</div>
+      <div class="input-wrap">
+        <label>Firebase Config JSON</label>
+        <textarea class="inp" v-model="syncInput.configJson" rows="5"
+          placeholder='貼入 firebaseConfig：
+{
+  "apiKey": "...",
+  "authDomain": "...",
+  "projectId": "...",
+  ...
+}'
+          style="font-size:11px; font-family:monospace; resize:vertical;"></textarea>
+      </div>
+      <div class="input-wrap">
+        <label>旅行密碼（所有手機用同一個）</label>
+        <input class="inp" v-model="syncInput.tripId" placeholder="例：nz2026mytrip（英數字，唔可有空格）">
+      </div>
+      <button class="btn btn-primary btn-full" @click="initSync">儲存並開始同步</button>
+      <button v-if="syncStatus !== 'local'" class="btn btn-outline btn-full" @click="disconnectSync" style="margin-top:4px;">斷開同步（改用本地儲存）</button>
+
+      <!-- Tutorial section -->
+      <div class="sec-title" style="margin-top:16px;">📖 設定教學（約 5 分鐘）</div>
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <div>打開 <strong>console.firebase.google.com</strong>（需要 Google 帳號登入）</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <div>按「<strong>新增專案</strong>」→ 填入名稱（例：NZ Trip 2026）→ 停用 Google Analytics → 建立專案</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <div>左側選單按「<strong>Firestore Database</strong>」→「建立資料庫」→ 選「<strong>以測試模式開始</strong>」→ 選任意位置 → 啟用</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">4</div>
+        <div>返回 Firebase 主頁 → 按「<strong>&lt;/&gt; 新增應用程式</strong>」（網頁圖示）→ 填入名稱 → 繼續</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">5</div>
+        <div>複製 <code style="background:#f1f3f4; padding:1px 4px; border-radius:3px;">firebaseConfig = { ... }</code> 大括號內嘅 JSON 內容</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">6</div>
+        <div>貼入上方輸入框，設定旅行密碼，按「儲存並開始同步」</div>
+      </div>
+      <div class="setup-step" style="border-bottom:none;">
+        <div class="step-num">7</div>
+        <div>其他手機重複步驟 6，用<strong>同一個旅行密碼</strong>即可共享所有資料 ✅</div>
+      </div>
+
+    </div>
+  </div>
+  </transition>
+
 </div><!-- /app -->
 <script>
 const { createApp } = Vue;
@@ -987,6 +1103,12 @@ createApp({
       currentTime: '',
       toastMsg: '',
 
+      // 雲端同步
+      syncStatus: 'local',   // 'local' | 'syncing' | 'synced' | 'error'
+      syncStatusDetail: '',
+      showSyncModal: false,
+      syncInput: { configJson: '', tripId: '' },
+
       // 地點
       locations: JSON.parse(JSON.stringify(PRESET_LOCATIONS)),
       locationFilter: 'all',
@@ -1020,6 +1142,12 @@ createApp({
   },
 
   computed: {
+    syncStatusIcon() {
+      return { local:'🔴', syncing:'🟡', synced:'🟢', error:'🔴' }[this.syncStatus] || '🔴';
+    },
+    syncStatusLabel() {
+      return { local:'本地儲存', syncing:'同步中...', synced:'雲端已同步', error:'同步錯誤' }[this.syncStatus] || '本地';
+    },
     filteredLocations() {
       if (this.locationFilter === 'all') return this.locations;
       return this.locations.filter(l => l.mainCategory === this.locationFilter);
@@ -1071,6 +1199,99 @@ createApp({
   },
 
   methods: {
+    /* ── Firebase sync ── */
+    _buildPayload() {
+      return {
+        userLocations:  this.locations.filter(l => l.userAdded),
+        tripDayEvents:  this.tripDays.map(d => ({ date: d.date, events: d.events.filter(e => !e.prefilled) })),
+        participants:   this.participants,
+        splitExpenses:  this.splitExpenses,
+        mustBuyItems:   this.mustBuyItems,
+      };
+    },
+    _applyData(d) {
+      // reset to preset then merge saved
+      this.locations = JSON.parse(JSON.stringify(PRESET_LOCATIONS));
+      if (d.userLocations)  this.locations.push(...d.userLocations);
+      if (d.tripDayEvents) {
+        // reset user events then reapply
+        this.tripDays = buildTripDays();
+        d.tripDayEvents.forEach(saved => {
+          const day = this.tripDays.find(td => td.date === saved.date);
+          if (day) day.events.push(...saved.events);
+        });
+      }
+      if (d.participants)   this.participants  = d.participants;
+      if (d.splitExpenses)  this.splitExpenses = d.splitExpenses;
+      if (d.mustBuyItems)   this.mustBuyItems  = d.mustBuyItems;
+    },
+    async saveToCloud() {
+      if (!this._db) return;
+      try {
+        this.syncStatus = 'syncing';
+        const tripId = this._tripId;
+        await this._db.collection('nzTrips').doc(tripId).set(this._buildPayload());
+        this.syncStatus = 'synced';
+        this.syncStatusDetail = '最後同步：' + new Date().toLocaleTimeString('zh-HK', { hour:'2-digit', minute:'2-digit' });
+      } catch(e) {
+        this.syncStatus = 'error';
+        this.syncStatusDetail = e.message;
+        console.error('Firestore save error', e);
+      }
+    },
+    setupRealtimeSync(tripId) {
+      if (this._unsubscribe) this._unsubscribe();
+      this._unsubscribe = this._db.collection('nzTrips').doc(tripId).onSnapshot(snap => {
+        if (snap.exists) {
+          this._applyData(snap.data());
+          this.syncStatus = 'synced';
+          this.syncStatusDetail = '最後同步：' + new Date().toLocaleTimeString('zh-HK', { hour:'2-digit', minute:'2-digit' });
+        }
+      }, err => {
+        this.syncStatus = 'error';
+        this.syncStatusDetail = err.message;
+      });
+    },
+    async initSync() {
+      const raw = this.syncInput.configJson.trim();
+      const tripId = this.syncInput.tripId.trim().replace(/\s+/g, '');
+      if (!raw || !tripId) { this.toast('請填入 Firebase Config 同旅行密碼'); return; }
+      let cfg;
+      try {
+        // support both plain object and JSON string
+        cfg = JSON.parse(raw);
+      } catch(e) {
+        this.toast('Firebase Config 格式有誤，請確認是完整 JSON'); return;
+      }
+      try {
+        try { firebase.app(); } catch(_) { firebase.initializeApp(cfg); }
+        this._db = firebase.firestore();
+        this._tripId = tripId;
+        // persist config
+        localStorage.setItem('nzSyncConfig', JSON.stringify({ cfg, tripId }));
+        this.syncStatus = 'syncing';
+        this.showSyncModal = false;
+        this.setupRealtimeSync(tripId);
+        await this.saveToCloud(); // upload local data on first connect
+        this.toast('✅ 雲端同步已開啟！');
+      } catch(e) {
+        this.syncStatus = 'error';
+        this.syncStatusDetail = e.message;
+        this.toast('Firebase 連接失敗：' + e.message);
+        console.error(e);
+      }
+    },
+    disconnectSync() {
+      if (this._unsubscribe) { this._unsubscribe(); this._unsubscribe = null; }
+      this._db = null;
+      this._tripId = null;
+      localStorage.removeItem('nzSyncConfig');
+      this.syncStatus = 'local';
+      this.syncStatusDetail = '';
+      this.showSyncModal = false;
+      this.toast('已斷開雲端同步，改用本地儲存');
+    },
+
     /* ── helpers ── */
     toast(msg) {
       this.toastMsg = msg;
@@ -1078,33 +1299,36 @@ createApp({
       this._toastTimer = setTimeout(() => { this.toastMsg = ''; }, 2000);
     },
     save() {
-      const payload = {
-        userLocations:   this.locations.filter(l => l.userAdded),
-        tripDayEvents:   this.tripDays.map(d => ({ date: d.date, events: d.events.filter(e => !e.prefilled) })),
-        participants:    this.participants,
-        splitExpenses:   this.splitExpenses,
-        mustBuyItems:    this.mustBuyItems,
-      };
-      localStorage.setItem('nzTravelPlan', JSON.stringify(payload));
-      this.toast('✓ 已儲存');
+      // 1. 永遠先儲存到 localStorage（offline fallback）
+      localStorage.setItem('nzTravelPlan', JSON.stringify(this._buildPayload()));
+      // 2. 若已連接 Firebase，額外同步到雲端
+      if (this._db) {
+        this.saveToCloud();
+      } else {
+        this.toast('✓ 已儲存');
+      }
     },
     load() {
+      // A. 先嘗試恢復 Firebase 連接
+      try {
+        const syncRaw = localStorage.getItem('nzSyncConfig');
+        if (syncRaw) {
+          const { cfg, tripId } = JSON.parse(syncRaw);
+          this.syncInput.tripId = tripId;
+          try { firebase.app(); } catch(_) { firebase.initializeApp(cfg); }
+          this._db = firebase.firestore();
+          this._tripId = tripId;
+          this.syncStatus = 'syncing';
+          this.setupRealtimeSync(tripId); // real-time listener will populate data
+          return; // data will come from Firestore via onSnapshot
+        }
+      } catch(e) { console.error('Firebase restore error', e); }
+
+      // B. Fallback: 讀 localStorage
       try {
         const raw = localStorage.getItem('nzTravelPlan');
         if (!raw) return;
-        const d = JSON.parse(raw);
-        // user-added locations
-        if (d.userLocations) this.locations.push(...d.userLocations);
-        // user-added events per day
-        if (d.tripDayEvents) {
-          d.tripDayEvents.forEach(saved => {
-            const day = this.tripDays.find(td => td.date === saved.date);
-            if (day) day.events.push(...saved.events);
-          });
-        }
-        if (d.participants)  this.participants  = d.participants;
-        if (d.splitExpenses) this.splitExpenses = d.splitExpenses;
-        if (d.mustBuyItems)  this.mustBuyItems  = d.mustBuyItems;
+        this._applyData(JSON.parse(raw));
       } catch(e) { console.error('load error', e); }
     },
 
