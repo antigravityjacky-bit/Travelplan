@@ -1,1245 +1,1268 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Plan - 紐西蘭之旅</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✈️ 紐西蘭之旅 2026</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --g-blue:   #4285F4;
+      --g-green:  #34A853;
+      --g-red:    #EA4335;
+      --g-yellow: #FBBC04;
+      --g-bg:     #F8F9FA;
+      --g-border: #DADCE0;
+      --g-dark:   #202124;
+      --g-mid:    #5F6368;
+      --g-light:  #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Google Sans', 'Roboto', 'Segoe UI', sans-serif;
+      background: #e8eaf0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 16px 0;
+    }
 
-        :root {
-            --google-blue: #1f2937;
-            --google-red: #ea4335;
-            --google-yellow: #fbbc04;
-            --google-green: #34a853;
-            --google-light-gray: #f8f9fa;
-            --google-border: #dadce0;
-        }
+    /* ── Phone frame ── */
+    #app { width: 100%; display: flex; justify-content: center; }
+    .phone {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      background: var(--g-bg);
+      display: flex;
+      flex-direction: column;
+      border-radius: 36px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,.18);
+      position: relative;
+    }
+    @media (max-width: 430px) {
+      body { padding: 0; }
+      .phone { border-radius: 0; min-height: 100dvh; }
+    }
 
-        body {
-            font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-            background-color: var(--google-light-gray);
-            color: var(--google-blue);
-        }
+    /* ── Status bar ── */
+    .statusbar {
+      background: var(--g-blue);
+      color: #fff;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 18px 4px;
+      letter-spacing: .3px;
+    }
 
-        /* 手機 App 風格 */
-        .phone-frame {
-            max-width: 480px;
-            margin: 20px auto;
-            background: white;
-            border-radius: 40px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            position: relative;
-        }
+    /* ── App header ── */
+    .appheader {
+      background: var(--g-blue);
+      color: #fff;
+      padding: 10px 18px 14px;
+      text-align: center;
+    }
+    .appheader h1 { font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
+    .appheader p  { font-size: 11px; opacity: .85; margin-top: 2px; }
 
-        /* Status bar */
-        .status-bar {
-            background: white;
-            padding: 8px 20px;
-            border-bottom: 1px solid var(--google-border);
-            font-size: 12px;
-            color: var(--google-blue);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    /* ── Scroll area ── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 14px 8px;
+    }
+    .content::-webkit-scrollbar { width: 4px; }
+    .content::-webkit-scrollbar-thumb { background: var(--g-border); border-radius: 2px; }
 
-        /* App header */
-        .app-header {
-            background: linear-gradient(135deg, var(--google-blue) 0%, #111827 100%);
-            color: white;
-            padding: 16px 20px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
+    /* ── Bottom nav ── */
+    .bottomnav {
+      background: #fff;
+      border-top: 1px solid var(--g-border);
+      display: flex;
+      padding: 6px 0 10px;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      padding: 6px 4px;
+      border-radius: 12px;
+      font-size: 10px;
+      color: var(--g-mid);
+      transition: color .2s, background .2s;
+      border: none;
+      background: transparent;
+    }
+    .nav-btn .nav-icon { font-size: 22px; line-height: 1; }
+    .nav-btn.active { color: var(--g-blue); }
+    .nav-btn.active .nav-icon { filter: drop-shadow(0 0 3px rgba(66,133,244,.4)); }
 
-        .app-header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-        }
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      border: 1px solid var(--g-border);
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .card-sm { padding: 10px 12px; border-radius: 10px; }
 
-        /* 主要內容區域 */
-        .app-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            background-color: var(--google-light-gray);
-        }
+    /* ── Section title ── */
+    .sec-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--g-mid);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin: 14px 0 8px;
+    }
 
-        .app-content::-webkit-scrollbar {
-            width: 6px;
-        }
+    /* ── Filter chips ── */
+    .chips { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid var(--g-border);
+      background: #fff;
+      color: var(--g-mid);
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    .chip.active {
+      background: var(--g-blue);
+      border-color: var(--g-blue);
+      color: #fff;
+    }
 
-        .app-content::-webkit-scrollbar-track {
-            background: transparent;
-        }
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .2px;
+    }
+    .badge-blue   { background: #e8f0fe; color: #1a73e8; }
+    .badge-green  { background: #e6f4ea; color: #137333; }
+    .badge-yellow { background: #fef9e0; color: #b06000; }
+    .badge-red    { background: #fce8e6; color: #c5221f; }
+    .badge-purple { background: #f3e8fd; color: #7b1fa2; }
+    .badge-teal   { background: #e0f5f5; color: #00695c; }
+    .badge-gray   { background: #f1f3f4; color: #5f6368; }
 
-        .app-content::-webkit-scrollbar-thumb {
-            background: var(--google-border);
-            border-radius: 3px;
-        }
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .18s;
+    }
+    .btn-primary { background: var(--g-blue); color: #fff; }
+    .btn-primary:hover { background: #1a73e8; box-shadow: 0 2px 8px rgba(66,133,244,.35); }
+    .btn-green { background: var(--g-green); color: #fff; }
+    .btn-green:hover { background: #2d9148; }
+    .btn-red { background: var(--g-red); color: #fff; }
+    .btn-red:hover { opacity: .88; }
+    .btn-outline { background: #fff; color: var(--g-dark); border: 1.5px solid var(--g-border); }
+    .btn-outline:hover { background: var(--g-bg); }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+    .btn-full { width: 100%; margin-bottom: 10px; }
+    .btn-icon { padding: 6px 8px; border-radius: 8px; font-size: 16px; }
 
-        /* 底部導航 */
-        .bottom-nav {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 12px 0;
-            background: white;
-            border-top: 1px solid var(--google-border);
-            gap: 8px;
-        }
+    /* ── Inputs ── */
+    .input-wrap { margin-bottom: 10px; }
+    .input-wrap label { display: block; font-size: 11px; font-weight: 600; color: var(--g-mid); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+    .inp {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--g-border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--g-dark);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .inp:focus { outline: none; border-color: var(--g-blue); box-shadow: 0 0 0 3px rgba(66,133,244,.15); }
+    .inp[type=checkbox] { width: auto; }
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            padding: 8px 12px;
-            cursor: pointer;
-            border-radius: 12px;
-            font-size: 11px;
-            color: #999;
-            transition: all 0.3s ease;
-            flex: 1;
-        }
+    /* ── Timeline ── */
+    .timeline { position: relative; padding-left: 20px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px; top: 8px; bottom: 8px;
+      width: 2px;
+      background: var(--g-border);
+      border-radius: 1px;
+    }
+    .tl-item { position: relative; margin-bottom: 10px; }
+    .tl-dot {
+      position: absolute;
+      left: -17px; top: 10px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px var(--g-border);
+      background: var(--g-mid);
+    }
+    .tl-dot.blue   { background: var(--g-blue); box-shadow: 0 0 0 1px var(--g-blue); }
+    .tl-dot.green  { background: var(--g-green); box-shadow: 0 0 0 1px var(--g-green); }
+    .tl-dot.yellow { background: var(--g-yellow); box-shadow: 0 0 0 1px var(--g-yellow); }
 
-        .nav-item.active {
-            background: #f0f0f0;
-            color: var(--google-blue);
-            font-weight: 600;
-        }
+    /* ── Day accordion ── */
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 14px;
+      background: #fff;
+      border: 1px solid var(--g-border);
+      border-radius: 12px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      transition: background .15s;
+    }
+    .day-header:hover { background: #f0f4ff; }
+    .day-header.open {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      border-bottom-color: transparent;
+      background: #f0f4ff;
+    }
+    .day-body {
+      background: #f7f9ff;
+      border: 1px solid var(--g-border);
+      border-top: none;
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+      padding: 12px 14px 10px;
+      margin-bottom: 8px;
+    }
 
-        .nav-icon {
-            font-size: 20px;
-        }
+    /* ── Flight card ── */
+    .flight-card {
+      background: linear-gradient(135deg, var(--g-blue) 0%, #1a73e8 100%);
+      color: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 14px rgba(66,133,244,.3);
+    }
+    .flight-route {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 8px 0;
+    }
+    .flight-code { font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+    .flight-time { font-size: 17px; font-weight: 600; }
+    .flight-arrow { font-size: 18px; opacity: .8; }
+    .flight-meta { font-size: 11px; opacity: .8; }
 
-        /* 卡片設計 */
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            border: 1px solid var(--google-border);
-            transition: all 0.2s ease;
-        }
+    /* ── Bill split ── */
+    .person-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #e8f0fe;
+      color: #1a73e8;
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 3px;
+    }
+    .person-chip button {
+      background: none; border: none; cursor: pointer;
+      color: #5f6368; font-size: 13px; line-height: 1;
+      padding: 0 0 0 2px;
+    }
+    .settle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #e6f4ea;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .balance-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--g-border);
+      font-size: 13px;
+    }
+    .balance-row:last-child { border-bottom: none; }
 
-        .card:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-        }
+    /* ── Must-buy ── */
+    .buy-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--g-border);
+    }
+    .buy-item:last-child { border-bottom: none; }
+    .buy-item input[type=checkbox] {
+      width: 18px; height: 18px;
+      accent-color: var(--g-green);
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .buy-item.done .buy-name { text-decoration: line-through; color: #aaa; }
+    .buy-name { font-size: 14px; font-weight: 600; color: var(--g-dark); line-height: 1.3; }
+    .buy-note { font-size: 11px; color: var(--g-mid); margin-top: 2px; }
 
-        /* 標題 */
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--google-blue);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    /* ── Progress bar ── */
+    .progress-bg { background: var(--g-border); border-radius: 4px; height: 6px; margin: 6px 0 2px; }
+    .progress-fill { height: 6px; border-radius: 4px; background: var(--g-green); transition: width .4s; }
 
-        /* 按鈕 */
-        .btn {
-            padding: 10px 16px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 999;
+    }
+    .modal-box {
+      background: #fff;
+      width: 100%;
+      max-width: 430px;
+      border-radius: 22px 22px 0 0;
+      padding: 20px 18px 28px;
+      max-height: 85dvh;
+      overflow-y: auto;
+      animation: slideUp .28s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .modal-head h2 { font-size: 17px; font-weight: 700; color: var(--g-dark); }
+    .modal-close {
+      background: #f1f3f4; border: none; border-radius: 50%;
+      width: 28px; height: 28px; font-size: 15px;
+      cursor: pointer; color: var(--g-mid);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-foot { display: flex; gap: 8px; margin-top: 14px; }
+    .modal-foot .btn { flex: 1; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--google-blue) 0%, #374151 100%);
-            color: white;
-        }
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%; transform: translateX(-50%);
+      background: #323232;
+      color: #fff;
+      padding: 9px 18px;
+      border-radius: 24px;
+      font-size: 13px;
+      z-index: 1100;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+    }
 
-        .btn-primary:hover {
-            box-shadow: 0 4px 12px rgba(31, 41, 55, 0.3);
-        }
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 36px 16px; color: var(--g-mid); }
+    .empty .ei { font-size: 44px; margin-bottom: 8px; }
+    .empty p { font-size: 13px; }
 
-        .btn-secondary {
-            background: white;
-            color: var(--google-blue);
-            border: 1px solid var(--google-border);
-        }
+    /* ── Stat strip ── */
+    .stat-strip {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stat-box {
+      flex: 1;
+      background: #fff;
+      border: 1px solid var(--g-border);
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat-box .sv { font-size: 22px; font-weight: 800; color: var(--g-blue); }
+    .stat-box .sl { font-size: 10px; color: var(--g-mid); margin-top: 2px; }
 
-        .btn-secondary:hover {
-            background: var(--google-light-gray);
-        }
+    /* ── Countdown ── */
+    .countdown-card {
+      background: linear-gradient(135deg, #202124 0%, #37474f 100%);
+      color: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .countdown-card .days { font-size: 48px; font-weight: 900; line-height: 1; }
+    .countdown-card .label { font-size: 12px; opacity: .75; margin-top: 4px; }
 
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-danger {
-            background: var(--google-red);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            opacity: 0.9;
-        }
-
-        .w-full {
-            width: 100%;
-        }
-
-        /* 地圖容器 */
-        #map {
-            width: 100%;
-            height: 400px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-        }
-
-        /* 輸入框 */
-        .input-group {
-            margin-bottom: 12px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--google-blue);
-            margin-bottom: 6px;
-        }
-
-        .input-group input,
-        .input-group textarea,
-        .input-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--google-border);
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-            transition: border-color 0.2s ease;
-        }
-
-        .input-group input:focus,
-        .input-group textarea:focus,
-        .input-group select:focus {
-            outline: none;
-            border-color: var(--google-blue);
-            box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.1);
-        }
-
-        .input-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        /* 標籤 */
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .badge-success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .badge-info {
-            background: #dbeafe;
-            color: #0c2d6b;
-        }
-
-        .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        /* 列表項目 */
-        .list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--google-border);
-        }
-
-        .list-item:last-child {
-            border-bottom: none;
-        }
-
-        .list-item-left {
-            flex: 1;
-        }
-
-        .list-item-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--google-blue);
-            margin-bottom: 4px;
-        }
-
-        .list-item-desc {
-            font-size: 12px;
-            color: #999;
-            line-height: 1.4;
-        }
-
-        .list-item-right {
-            text-align: right;
-            margin-left: 12px;
-            white-space: nowrap;
-        }
-
-        .rating {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--google-blue);
-        }
-
-        .rating-stars {
-            color: var(--google-yellow);
-            font-size: 14px;
-            margin-right: 4px;
-        }
-
-        /* 空狀態 */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
-
-        .empty-state-text {
-            font-size: 14px;
-            margin-bottom: 16px;
-        }
-
-        /* 模態框 */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: flex-end;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background: white;
-            width: 100%;
-            max-width: 480px;
-            border-radius: 20px 20px 0 0;
-            padding: 24px;
-            animation: slideUp 0.3s ease;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(100%);
-            }
-            to {
-                transform: translateY(0);
-            }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .modal-header h2 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .modal-footer {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .modal-footer .btn {
-            flex: 1;
-        }
-
-        /* 統計卡片 */
-        .stat-card {
-            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-            color: white;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            text-align: center;
-        }
-
-        .stat-card .stat-label {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 6px;
-        }
-
-        .stat-card .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        /* 動畫 */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.3s ease;
-        }
-
-        .success-message {
-            background: #d1fae5;
-            color: #065f46;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            text-align: center;
-            font-size: 12px;
-        }
-
-        /* Leaflet custom styles */
-        .leaflet-container {
-            font-family: 'Segoe UI', 'Roboto';
-        }
-
-        /* 響應式設計 */
-        @media (max-width: 480px) {
-            .phone-frame {
-                border-radius: 0;
-                height: 100vh;
-                max-width: 100%;
-            }
-        }
-    </style>
+    /* ── Fade transition ── */
+    .fade-enter-active, .fade-leave-active { transition: opacity .2s; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+  </style>
 </head>
 <body>
-    <div id="app">
-        <div class="phone-frame">
-            <!-- Status Bar -->
-            <div class="status-bar">
-                <span>9:41</span>
-                <span>Travel Plan</span>
-                <span>📶 📡 🔋</span>
-            </div>
+<div id="app">
+  <div class="phone">
 
-            <!-- Header -->
-            <div class="app-header">
-                <h1>✈️ 紐西蘭之旅</h1>
-            </div>
-
-            <!-- Content Area -->
-            <div class="app-content">
-                <!-- 行程表 Tab -->
-                <div v-if="activeTab === 'itinerary'" class="fade-in">
-                    <div class="section-title">
-                        📅 我的行程
-                    </div>
-
-                    <div v-if="saveMessage" class="success-message">
-                        ✓ 數據已自動保存
-                    </div>
-
-                    <button @click="showAddItinerary = true" class="btn btn-primary w-full" style="margin-bottom: 16px;">
-                        ➕ 新增行程
-                    </button>
-
-                    <div v-if="itineraries.length === 0" class="empty-state">
-                        <div class="empty-state-icon">📋</div>
-                        <div class="empty-state-text">暫時沒有行程</div>
-                        <button @click="showAddItinerary = true" class="btn btn-primary btn-small">新增行程</button>
-                    </div>
-
-                    <div v-for="item in sortedItineraries" :key="item.id" class="card fade-in">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                            <div>
-                                <div style="font-size: 18px; font-weight: bold; color: var(--google-blue);">{{ formatDate(item.date) }}</div>
-                                <div style="font-size: 12px; color: #999;">{{ item.time }}</div>
-                            </div>
-                            <button @click="deleteItinerary(item.id)" class="btn btn-danger btn-small">刪除</button>
-                        </div>
-                        <div style="font-size: 14px; font-weight: 600; color: var(--google-blue); margin-bottom: 6px;">📍 {{ item.location }}</div>
-                        <p style="font-size: 13px; color: #666; line-height: 1.5;">{{ item.activity }}</p>
-                    </div>
-                </div>
-
-                <!-- 地圖 Tab -->
-                <div v-if="activeTab === 'map'" class="fade-in">
-                    <div class="section-title">
-                        🗺️ 紐西蘭景點地圖
-                    </div>
-
-                    <div v-if="saveMessage" class="success-message">
-                        ✓ 地點已保存
-                    </div>
-
-                    <div id="map"></div>
-
-                    <div class="stat-card">
-                        <div class="stat-label">已標記景點</div>
-                        <div class="stat-value">{{ locations.length }} 個</div>
-                    </div>
-
-                    <div class="section-title">
-                        📍 景點清單
-                    </div>
-
-                    <div v-for="location in locations" :key="location.name" class="card fade-in">
-                        <div class="list-item">
-                            <div class="list-item-left">
-                                <div class="list-item-title">{{ location.name }}</div>
-                                <div class="list-item-desc">
-                                    <div v-if="location.category" style="margin-bottom: 6px;">
-                                        <span class="badge badge-info">{{ location.category }}</span>
-                                    </div>
-                                    <div v-if="location.rating" style="margin-bottom: 6px;">
-                                        <span class="rating-stars">⭐</span><span class="rating">{{ location.rating }}</span>
-                                        <span style="color: #999; font-size: 12px;"> ({{ location.reviews }})</span>
-                                    </div>
-                                    <div v-if="location.notes">{{ location.notes }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 記帳 Tab -->
-                <div v-if="activeTab === 'expense'" class="fade-in">
-                    <div class="section-title">
-                        💰 旅遊支出
-                    </div>
-
-                    <div v-if="saveMessage" class="success-message">
-                        ✓ 數據已自動保存
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-label">總支出</div>
-                        <div class="stat-value">NZ${{ totalExpense.toFixed(2) }}</div>
-                    </div>
-
-                    <button @click="showAddExpense = true" class="btn btn-primary w-full" style="margin-bottom: 16px;">
-                        ➕ 新增支出
-                    </button>
-
-                    <div v-if="expenses.length === 0" class="empty-state">
-                        <div class="empty-state-icon">💳</div>
-                        <div class="empty-state-text">暫時沒有支出</div>
-                    </div>
-
-                    <div v-for="expense in expenses" :key="expense.id" class="card fade-in">
-                        <div class="list-item">
-                            <div class="list-item-left">
-                                <div class="list-item-title">{{ expense.category }}</div>
-                                <div class="list-item-desc">
-                                    <div>
-                                        <span class="badge" 
-                                            :class="{
-                                                'badge-success': expense.paymentMethod === '現金',
-                                                'badge-info': expense.paymentMethod === '信用卡'
-                                            }">
-                                            {{ expense.paymentMethod }}
-                                        </span>
-                                        <span style="margin-left: 8px; color: #999;">👤 {{ expense.paidBy }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="list-item-right">
-                                <div class="rating" style="color: var(--google-red); font-size: 14px;">-NZ${{ expense.amount.toFixed(2) }}</div>
-                                <button @click="deleteExpense(expense.id)" class="btn btn-danger btn-small" style="margin-top: 6px;">刪除</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 購物清單 Tab -->
-                <div v-if="activeTab === 'shopping'" class="fade-in">
-                    <div class="section-title">
-                        🛒 購物清單
-                    </div>
-
-                    <div v-if="saveMessage" class="success-message">
-                        ✓ 數據已自動保存
-                    </div>
-
-                    <button @click="showAddShoppingItem = true" class="btn btn-primary w-full" style="margin-bottom: 16px;">
-                        ➕ 新增項目
-                    </button>
-
-                    <div v-if="shoppingList.length === 0" class="empty-state">
-                        <div class="empty-state-icon">🛍️</div>
-                        <div class="empty-state-text">清單是空的</div>
-                    </div>
-
-                    <div v-for="item in shoppingList" :key="item.id" class="card fade-in">
-                        <div class="list-item">
-                            <div class="list-item-left">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input 
-                                        type="checkbox" 
-                                        :checked="item.completed"
-                                        @change="toggleShoppingItem(item.id)"
-                                        style="width: 18px; height: 18px; cursor: pointer;">
-                                    <span :style="{ 
-                                        textDecoration: item.completed ? 'line-through' : 'none',
-                                        color: item.completed ? '#999' : 'var(--google-blue)'
-                                    }" class="list-item-title">
-                                        {{ item.name }}
-                                    </span>
-                                </div>
-                                <div class="list-item-desc" v-if="item.note" style="margin-top: 6px;">{{ item.note }}</div>
-                            </div>
-                            <button @click="deleteShoppingItem(item.id)" class="btn btn-danger btn-small">刪除</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bottom Navigation -->
-            <div class="bottom-nav">
-                <div 
-                    @click="activeTab = 'itinerary'"
-                    :class="['nav-item', { active: activeTab === 'itinerary' }]">
-                    <div class="nav-icon">📅</div>
-                    <div>行程</div>
-                </div>
-                <div 
-                    @click="activeTab = 'map'"
-                    :class="['nav-item', { active: activeTab === 'map' }]">
-                    <div class="nav-icon">🗺️</div>
-                    <div>地圖</div>
-                </div>
-                <div 
-                    @click="activeTab = 'expense'"
-                    :class="['nav-item', { active: activeTab === 'expense' }]">
-                    <div class="nav-icon">💰</div>
-                    <div>支出</div>
-                </div>
-                <div 
-                    @click="activeTab = 'shopping'"
-                    :class="['nav-item', { active: activeTab === 'shopping' }]">
-                    <div class="nav-icon">🛒</div>
-                    <div>購物</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 新增行程模態框 -->
-        <div v-if="showAddItinerary" class="modal" @click.self="showAddItinerary = false">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>新增行程</h2>
-                    <button class="modal-close" @click="showAddItinerary = false">✕</button>
-                </div>
-
-                <div class="input-group">
-                    <label>日期</label>
-                    <input type="date" v-model="newItinerary.date" placeholder="選擇日期">
-                </div>
-
-                <div class="input-group">
-                    <label>時間</label>
-                    <input type="time" v-model="newItinerary.time" placeholder="選擇時間">
-                </div>
-
-                <div class="input-group">
-                    <label>地點</label>
-                    <input type="text" v-model="newItinerary.location" placeholder="例：皇后鎮">
-                </div>
-
-                <div class="input-group">
-                    <label>活動描述</label>
-                    <textarea v-model="newItinerary.activity" placeholder="例：蹦極跳、遊湖"></textarea>
-                </div>
-
-                <div class="modal-footer">
-                    <button @click="showAddItinerary = false" class="btn btn-secondary">取消</button>
-                    <button @click="addItinerary" class="btn btn-primary">新增</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 新增支出模態框 -->
-        <div v-if="showAddExpense" class="modal" @click.self="showAddExpense = false">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>新增支出</h2>
-                    <button class="modal-close" @click="showAddExpense = false">✕</button>
-                </div>
-
-                <div class="input-group">
-                    <label>分類</label>
-                    <select v-model="newExpense.category">
-                        <option value="">選擇分類</option>
-                        <option value="食物">🍜 食物</option>
-                        <option value="交通">🚗 交通</option>
-                        <option value="住宿">🏨 住宿</option>
-                        <option value="購物">🛍️ 購物</option>
-                        <option value="門票">🎫 門票</option>
-                        <option value="其他">📌 其他</option>
-                    </select>
-                </div>
-
-                <div class="input-group">
-                    <label>金額 (NZ$)</label>
-                    <input type="number" v-model.number="newExpense.amount" placeholder="0.00" step="0.01">
-                </div>
-
-                <div class="input-group">
-                    <label>支付方式</label>
-                    <select v-model="newExpense.paymentMethod">
-                        <option value="">選擇支付方式</option>
-                        <option value="現金">💵 現金</option>
-                        <option value="信用卡">💳 信用卡</option>
-                    </select>
-                </div>
-
-                <div class="input-group">
-                    <label>由誰支付</label>
-                    <input type="text" v-model="newExpense.paidBy" placeholder="例：我、朋友名字">
-                </div>
-
-                <div class="modal-footer">
-                    <button @click="showAddExpense = false" class="btn btn-secondary">取消</button>
-                    <button @click="addExpense" class="btn btn-primary">新增</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 新增購物項目模態框 -->
-        <div v-if="showAddShoppingItem" class="modal" @click.self="showAddShoppingItem = false">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>新增購物項目</h2>
-                    <button class="modal-close" @click="showAddShoppingItem = false">✕</button>
-                </div>
-
-                <div class="input-group">
-                    <label>項目名稱</label>
-                    <input type="text" v-model="newShoppingItem.name" placeholder="例：紐西蘭蜂蜜">
-                </div>
-
-                <div class="input-group">
-                    <label>備註（可選）</label>
-                    <input type="text" v-model="newShoppingItem.note" placeholder="例：皇后鎮">
-                </div>
-
-                <div class="modal-footer">
-                    <button @click="showAddShoppingItem = false" class="btn btn-secondary">取消</button>
-                    <button @click="addShoppingItem" class="btn btn-primary">新增</button>
-                </div>
-            </div>
-        </div>
+    <!-- Status Bar -->
+    <div class="statusbar">
+      <span>{{ currentTime }}</span>
+      <span>✈️ NZ Trip 2026</span>
+      <span>📶 🔋</span>
     </div>
 
-    <script>
-        const { createApp } = Vue;
+    <!-- App Header -->
+    <div class="appheader">
+      <h1>🌿 紐西蘭之旅</h1>
+      <p>31 May – 9 Jun 2026 · Christchurch &amp; South Island</p>
+    </div>
 
-        // 紐西蘭景點座標數據
-        const nzLocations = [
-            {
-                name: "Blue Penguins Pukekura",
-                category: "野生動物保護區",
-                rating: 4.8,
-                reviews: 746,
-                lat: -45.21662,
-                lng: 170.24996,
-                notes: "小藍企鵝保護區"
-            },
-            {
-                name: "Opuke Thermal Pools & Spa",
-                category: "Leisure center",
-                rating: 4.6,
-                reviews: 1403,
-                lat: -38.37516,
-                lng: 176.24917,
-                notes: ""
-            },
-            {
-                name: "Mount Cook Airport",
-                category: "機場",
-                rating: 4.7,
-                reviews: 98,
-                lat: -43.3897,
-                lng: 170.1829,
-                notes: ""
-            },
-            {
-                name: "Te Kano Estate",
-                category: "釀酒廠",
-                rating: 4.8,
-                reviews: 140,
-                lat: -43.5953,
-                lng: 169.1642,
-                notes: ""
-            },
-            {
-                name: "Dark Sky Project",
-                category: "旅遊景點",
-                rating: 4.4,
-                reviews: 2223,
-                lat: -44.0352,
-                lng: 169.0289,
-                notes: "觀星聖地"
-            },
-            {
-                name: "Astro Cafe",
-                category: "咖啡店",
-                rating: 4.2,
-                reviews: 1238,
-                lat: -44.0354,
-                lng: 169.0272,
-                notes: "NZ$10-20"
-            },
-            {
-                name: "Playground at the lake",
-                category: "遊樂場",
-                rating: 4.9,
-                reviews: 31,
-                lat: -44.4062,
-                lng: 169.6075,
-                notes: ""
-            },
-            {
-                name: "好牧羊人教堂",
-                category: "教堂",
-                rating: 4.6,
-                reviews: 6352,
-                lat: -43.8065,
-                lng: 170.5126,
-                notes: "Lake Tekapo 必去景點"
-            },
-            {
-                name: "Shamarra Alpacas",
-                category: "旅遊景點",
-                rating: 4.9,
-                reviews: 680,
-                lat: -44.2893,
-                lng: 169.2419,
-                notes: "羊駝牧場"
-            },
-            {
-                name: "Whale Watch Kaikoura",
-                category: "旅遊景點",
-                rating: 4.6,
-                reviews: 4612,
-                lat: -42.4108,
-                lng: 173.6866,
-                notes: "觀鯨活動"
-            },
-            {
-                name: "Patagonia Chocolates",
-                category: "冰淇淋",
-                rating: 4.5,
-                reviews: 4093,
-                lat: -44.9650,
-                lng: 168.3498,
-                notes: "$$"
-            },
-            {
-                name: "Cookie Time Bakery",
-                category: "餅乾",
-                rating: 4.5,
-                reviews: 1180,
-                lat: -43.5305,
-                lng: 172.6362,
-                notes: "$"
-            },
-            {
-                name: "Caroline Bay",
-                category: "海灣",
-                rating: 4.7,
-                reviews: 37,
-                lat: -44.3065,
-                lng: 171.2052,
-                notes: "海邊度假勝地"
-            },
-            {
-                name: "Ōamaru Penguins",
-                category: "旅遊景點",
-                rating: 4.3,
-                reviews: 3156,
-                lat: -45.1077,
-                lng: 171.2044,
-                notes: "企鵝觀看"
-            },
-            {
-                name: "Castle Hill",
-                category: "景點",
-                lat: -43.2,
-                lng: 171.5,
-                notes: "石灰岩地形"
-            },
-            {
-                name: "奇異鳥鳥類生態公園",
-                category: "野生動物保護區",
-                rating: 4.5,
-                reviews: 1940,
-                lat: -41.0082,
-                lng: 175.2475,
-                notes: "Rotorua"
-            },
-            {
-                name: "箭鎮",
-                category: "景點",
-                lat: -44.9283,
-                lng: 168.8346,
-                notes: "秋天楓葉景觀"
-            },
-            {
-                name: "Glenorchy Restored Steamship Depot",
-                category: "歷史建築",
-                rating: 4.8,
-                reviews: 74,
-                lat: -44.6850,
-                lng: 168.7189,
-                notes: "Red Shed"
-            },
-            {
-                name: "Glenorchy Wharf & Viewpoint",
-                category: "景點",
-                rating: 4.7,
-                reviews: 3112,
-                lat: -44.6883,
-                lng: 168.7247,
-                notes: ""
-            },
-            {
-                name: "瓦卡蒂普湖",
-                category: "湖泊",
-                rating: 4.8,
-                reviews: 598,
-                lat: -44.9167,
-                lng: 168.7333,
-                notes: "Lake Wakatipu"
-            },
-            {
-                name: "Hooker Valley track",
-                category: "步道",
-                lat: -43.7408,
-                lng: 170.1783,
-                notes: "庫克山步道"
-            },
-            {
-                name: "庫克山",
-                category: "山峰",
-                lat: -43.5950,
-                lng: 170.1835,
-                notes: "紐西蘭最高峰"
-            },
-            {
-                name: "Skyline Queenstown",
-                category: "旅遊景點",
-                rating: 4.6,
-                reviews: 13338,
-                lat: -44.9378,
-                lng: 168.7423,
-                notes: "纜車"
-            },
-            {
-                name: "Lake Tekapo",
-                category: "湖泊",
-                lat: -43.8961,
-                lng: 170.4671,
-                notes: "絕美蒂卡波湖"
-            },
-            {
-                name: "Onsen Hot Pools and Day Spa",
-                category: "水療中心",
-                rating: 4.7,
-                reviews: 4161,
-                lat: -44.0354,
-                lng: 169.0272,
-                notes: ""
-            },
-            {
-                name: "Hot Tubs Omarama",
-                category: "水療中心",
-                rating: 4.6,
-                reviews: 926,
-                lat: -44.4062,
-                lng: 169.6075,
-                notes: ""
-            },
-            {
-                name: "Deer Park Heights Queenstown",
-                category: "旅遊景點",
-                rating: 4.6,
-                reviews: 751,
-                lat: -44.9506,
-                lng: 168.6928,
-                notes: ""
-            },
-            {
-                name: "Tasman Glacier",
-                category: "冰川",
-                rating: 4.7,
-                reviews: 89,
-                lat: -43.4533,
-                lng: 170.1778,
-                notes: ""
-            },
-            {
-                name: "Perky's - Floating Bar Queenstown",
-                category: "酒吧",
-                rating: 4.8,
-                reviews: 539,
-                lat: -44.9318,
-                lng: 168.7423,
-                notes: "NZ$10-20"
-            },
-            {
-                name: "Lake Wakatipu Viewpoint",
-                category: "景點",
-                rating: 4.8,
-                reviews: 498,
-                lat: -44.9167,
-                lng: 168.7500,
-                notes: ""
-            }
-        ];
+    <!-- Toast -->
+    <transition name="fade">
+      <div v-if="toastMsg" class="toast">{{ toastMsg }}</div>
+    </transition>
 
-        createApp({
-            data() {
-                return {
-                    activeTab: 'itinerary',
-                    itineraries: [],
-                    expenses: [],
-                    shoppingList: [],
-                    locations: nzLocations,
-                    showAddItinerary: false,
-                    showAddExpense: false,
-                    showAddShoppingItem: false,
-                    saveMessage: false,
-                    map: null,
-                    markers: [],
-                    newItinerary: {
-                        date: '',
-                        time: '',
-                        location: '',
-                        activity: ''
-                    },
-                    newExpense: {
-                        category: '',
-                        amount: 0,
-                        paymentMethod: '',
-                        paidBy: ''
-                    },
-                    newShoppingItem: {
-                        name: '',
-                        note: ''
-                    }
-                }
-            },
-            computed: {
-                totalExpense() {
-                    return this.expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-                },
-                sortedItineraries() {
-                    return this.itineraries.sort((a, b) => {
-                        return new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time);
-                    });
-                }
-            },
-            methods: {
-                addItinerary() {
-                    if (this.newItinerary.date && this.newItinerary.time && this.newItinerary.location) {
-                        this.itineraries.push({
-                            id: Date.now(),
-                            ...this.newItinerary
-                        });
-                        this.newItinerary = {
-                            date: '',
-                            time: '',
-                            location: '',
-                            activity: ''
-                        };
-                        this.showAddItinerary = false;
-                        this.showSaveMessage();
-                        this.saveToLocalStorage();
-                    }
-                },
-                deleteItinerary(id) {
-                    this.itineraries = this.itineraries.filter(item => item.id !== id);
-                    this.showSaveMessage();
-                    this.saveToLocalStorage();
-                },
-                addExpense() {
-                    if (this.newExpense.category && this.newExpense.amount && this.newExpense.paymentMethod && this.newExpense.paidBy) {
-                        this.expenses.push({
-                            id: Date.now(),
-                            ...this.newExpense,
-                            amount: parseFloat(this.newExpense.amount)
-                        });
-                        this.newExpense = {
-                            category: '',
-                            amount: 0,
-                            paymentMethod: '',
-                            paidBy: ''
-                        };
-                        this.showAddExpense = false;
-                        this.showSaveMessage();
-                        this.saveToLocalStorage();
-                    }
-                },
-                deleteExpense(id) {
-                    this.expenses = this.expenses.filter(item => item.id !== id);
-                    this.showSaveMessage();
-                    this.saveToLocalStorage();
-                },
-                addShoppingItem() {
-                    if (this.newShoppingItem.name) {
-                        this.shoppingList.push({
-                            id: Date.now(),
-                            ...this.newShoppingItem,
-                            completed: false
-                        });
-                        this.newShoppingItem = {
-                            name: '',
-                            note: ''
-                        };
-                        this.showAddShoppingItem = false;
-                        this.showSaveMessage();
-                        this.saveToLocalStorage();
-                    }
-                },
-                deleteShoppingItem(id) {
-                    this.shoppingList = this.shoppingList.filter(item => item.id !== id);
-                    this.showSaveMessage();
-                    this.saveToLocalStorage();
-                },
-                toggleShoppingItem(id) {
-                    const item = this.shoppingList.find(i => i.id === id);
-                    if (item) {
-                        item.completed = !item.completed;
-                        this.showSaveMessage();
-                        this.saveToLocalStorage();
-                    }
-                },
-                saveToLocalStorage() {
-                    const data = {
-                        itineraries: this.itineraries,
-                        expenses: this.expenses,
-                        shoppingList: this.shoppingList
-                    };
-                    localStorage.setItem('travelPlanData', JSON.stringify(data));
-                },
-                loadFromLocalStorage() {
-                    const data = localStorage.getItem('travelPlanData');
-                    if (data) {
-                        try {
-                            const parsed = JSON.parse(data);
-                            this.itineraries = parsed.itineraries || [];
-                            this.expenses = parsed.expenses || [];
-                            this.shoppingList = parsed.shoppingList || [];
-                        } catch (e) {
-                            console.error('LocalStorage 讀取錯誤:', e);
-                        }
-                    }
-                },
-                showSaveMessage() {
-                    this.saveMessage = true;
-                    setTimeout(() => {
-                        this.saveMessage = false;
-                    }, 2000);
-                },
-                formatDate(dateString) {
-                    const date = new Date(dateString);
-                    return date.toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' });
-                },
-                initMap() {
-                    // 設置地圖中心為紐西蘭中心
-                    this.map = L.map('map').setView([-41.2865, 172.9988], 6);
-                    
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap contributors',
-                        maxZoom: 19
-                    }).addTo(this.map);
+    <!-- Content -->
+    <div class="content">
 
-                    // 添加所有標記
-                    this.locations.forEach((location, index) => {
-                        if (location.lat && location.lng) {
-                            const marker = L.marker([location.lat, location.lng])
-                                .addTo(this.map)
-                                .bindPopup(`
-                                    <strong>${location.name}</strong><br>
-                                    ${location.category}<br>
-                                    ${location.rating ? '⭐ ' + location.rating + ' (' + location.reviews + ')' : ''}
-                                `);
-                            this.markers.push(marker);
-                        }
-                    });
-                }
-            },
-            watch: {
-                activeTab(newTab) {
-                    if (newTab === 'map') {
-                        this.$nextTick(() => {
-                            if (!this.map) {
-                                this.initMap();
-                            }
-                        });
-                    }
-                }
-            },
-            mounted() {
-                this.loadFromLocalStorage();
-            }
-        }).mount('#app');
-    </script>
+      <!-- ══════════════ TAB: 地點 ══════════════ -->
+      <div v-show="activeTab === 'locations'">
+        <div class="chips">
+          <span class="chip" :class="{active: locationFilter==='all'}"    @click="locationFilter='all'">全部 {{ locations.length }}</span>
+          <span class="chip" :class="{active: locationFilter==='fandb'}"  @click="locationFilter='fandb'">🍽️ 食肆</span>
+          <span class="chip" :class="{active: locationFilter==='attraction'}" @click="locationFilter='attraction'">🏔️ 景點</span>
+          <span class="chip" :class="{active: locationFilter==='spa'}"    @click="locationFilter='spa'">🛁 水療</span>
+          <span class="chip" :class="{active: locationFilter==='hotel'}"  @click="locationFilter='hotel'">🏨 酒店</span>
+        </div>
+
+        <div class="stat-strip">
+          <div class="stat-box"><div class="sv">{{ countByCategory('fandb') }}</div><div class="sl">🍽️ 食肆</div></div>
+          <div class="stat-box"><div class="sv">{{ countByCategory('attraction') }}</div><div class="sl">🏔️ 景點</div></div>
+          <div class="stat-box"><div class="sv">{{ countByCategory('spa') }}</div><div class="sl">🛁 水療</div></div>
+          <div class="stat-box"><div class="sv">{{ countByCategory('hotel') }}</div><div class="sl">🏨 酒店</div></div>
+        </div>
+
+        <button class="btn btn-primary btn-full" @click="showAddLocation=true">＋ 新增地點</button>
+
+        <div v-if="filteredLocations.length === 0" class="empty">
+          <div class="ei">📍</div>
+          <p>未有此分類地點</p>
+        </div>
+
+        <div v-for="loc in filteredLocations" :key="loc.id" class="card">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
+                <span style="font-size:18px;">{{ categoryEmoji(loc.mainCategory) }}</span>
+                <span style="font-size:14px; font-weight:700; color:var(--g-dark);">{{ loc.name }}</span>
+              </div>
+              <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:4px;">
+                <span class="badge" :class="categoryBadge(loc.mainCategory)">{{ categoryLabel(loc.mainCategory) }}</span>
+                <span v-if="loc.subCategory" class="badge badge-gray">{{ loc.subCategory }}</span>
+              </div>
+              <div v-if="loc.rating" style="font-size:12px; color:var(--g-mid);">
+                <span style="color:#FBBC04;">⭐</span> {{ loc.rating }}
+                <span v-if="loc.reviews" style="color:#aaa;"> ({{ loc.reviews }})</span>
+              </div>
+              <div v-if="loc.notes" style="font-size:12px; color:var(--g-mid); margin-top:3px;">{{ loc.notes }}</div>
+            </div>
+            <button v-if="loc.userAdded" class="btn btn-red btn-sm btn-icon" @click="deleteLocation(loc.id)">🗑</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: 行程 ══════════════ -->
+      <div v-show="activeTab === 'itinerary'">
+        <div class="sec-title">📅 逐日行程</div>
+
+        <div v-for="day in tripDays" :key="day.date">
+          <!-- Day header -->
+          <div class="day-header" :class="{open: expandedDay===day.date}" @click="toggleDay(day.date)">
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--g-dark);">
+                {{ day.label }} · {{ formatDayHeader(day.date) }}
+              </div>
+              <div style="font-size:11px; color:var(--g-mid); margin-top:2px;">
+                <span v-if="day.events.length === 0">尚未有活動</span>
+                <span v-else>{{ day.events.length }} 個活動</span>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn btn-green btn-sm" @click.stop="openAddEvent(day.date)">＋</button>
+              <span style="font-size:14px; color:var(--g-mid);">{{ expandedDay===day.date ? '▲' : '▽' }}</span>
+            </div>
+          </div>
+
+          <!-- Day body -->
+          <div v-show="expandedDay===day.date" class="day-body">
+            <div v-if="day.events.length === 0" class="empty" style="padding:16px;">
+              <p>點擊 ＋ 新增活動</p>
+            </div>
+            <div v-else class="timeline">
+              <div v-for="ev in sortedEvents(day.events)" :key="ev.id" class="tl-item">
+                <div class="tl-dot" :class="ev.type==='flight'?'blue':ev.type==='hotel'?'yellow':'green'"></div>
+                <div class="card card-sm" style="margin-bottom:6px;">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:11px; color:var(--g-mid); margin-bottom:2px;">
+                        {{ ev.time }} <span v-if="ev.type==='flight'" class="badge badge-blue" style="margin-left:4px;">✈️ 航班</span>
+                      </div>
+                      <div style="font-size:13px; font-weight:700; color:var(--g-dark);">{{ ev.title }}</div>
+                      <div v-if="ev.location" style="font-size:12px; color:var(--g-mid); margin-top:2px;">📍 {{ ev.location }}</div>
+                      <div v-if="ev.notes" style="font-size:12px; color:var(--g-mid); margin-top:2px;">{{ ev.notes }}</div>
+                    </div>
+                    <button v-if="!ev.prefilled" class="btn btn-red btn-sm btn-icon" style="margin-left:8px;" @click="deleteEvent(day.date, ev.id)">🗑</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: 航班 ══════════════ -->
+      <div v-show="activeTab === 'flights'">
+        <div class="countdown-card">
+          <div class="days">{{ daysToFlight }}</div>
+          <div class="label">距離出發還有（日）</div>
+        </div>
+
+        <div class="sec-title">✈️ 航班資料</div>
+
+        <div v-for="fl in flights" :key="fl.flightNo" class="flight-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; opacity:.9;">{{ fl.flightNo }}</span>
+            <span class="badge badge-green" style="background:rgba(255,255,255,.2); color:#fff;">Confirmed</span>
+          </div>
+          <div class="flight-route">
+            <div style="text-align:center;">
+              <div class="flight-code">{{ fl.from }}</div>
+              <div class="flight-time">{{ fl.depTime }}</div>
+              <div class="flight-meta">{{ fl.depDate }}</div>
+            </div>
+            <div style="text-align:center;">
+              <div class="flight-arrow">✈️ ────</div>
+              <div style="font-size:11px; opacity:.8; margin-top:4px;">{{ fl.duration }}</div>
+            </div>
+            <div style="text-align:center;">
+              <div class="flight-code">{{ fl.to }}</div>
+              <div class="flight-time">{{ fl.arrTime }}</div>
+              <div class="flight-meta">{{ fl.arrDate }}</div>
+            </div>
+          </div>
+          <div style="font-size:11px; opacity:.75; border-top:1px solid rgba(255,255,255,.2); padding-top:8px; margin-top:4px;">
+            Air New Zealand · Economy · {{ fl.bookingClass }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: 分帳 ══════════════ -->
+      <div v-show="activeTab === 'split'">
+
+        <!-- Participants -->
+        <div class="sec-title">👥 參與者</div>
+        <div class="card">
+          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px;">
+            <div v-if="participants.length===0" style="font-size:12px; color:var(--g-mid);">未有參與者，請新增</div>
+            <span v-for="p in participants" :key="p" class="person-chip">
+              {{ p }}
+              <button @click="removeParticipant(p)">✕</button>
+            </span>
+          </div>
+          <button class="btn btn-outline btn-sm" @click="showAddParticipant=true">＋ 新增成員</button>
+        </div>
+
+        <!-- Add expense button -->
+        <button class="btn btn-primary btn-full" @click="openAddExpense">＋ 新增費用</button>
+
+        <!-- Balances -->
+        <div class="sec-title">💰 結算</div>
+        <div class="card" v-if="participants.length > 0">
+          <div v-if="settlements.length === 0" style="font-size:13px; color:var(--g-mid); text-align:center; padding:8px 0;">大家帳目已平 ✅</div>
+          <div v-for="s in settlements" :key="s.from+s.to" class="settle-row">
+            <span style="font-weight:700;">{{ s.from }}</span>
+            <span style="color:var(--g-mid);">需還</span>
+            <span style="font-weight:700;">{{ s.to }}</span>
+            <span style="margin-left:auto; font-weight:800; color:var(--g-red);">NZ${{ s.amount }}</span>
+          </div>
+        </div>
+        <div v-else class="empty" style="padding:16px;">
+          <p style="font-size:12px;">先新增參與者再記帳</p>
+        </div>
+
+        <!-- Balance per person -->
+        <div class="sec-title" v-if="participants.length > 0">📊 個人餘額</div>
+        <div class="card" v-if="participants.length > 0">
+          <div v-for="b in balances" :key="b.name" class="balance-row">
+            <span style="font-weight:600;">{{ b.name }}</span>
+            <div style="text-align:right;">
+              <div style="font-size:12px; color:var(--g-mid);">付出 NZ${{ b.paid.toFixed(2) }}</div>
+              <div style="font-size:13px; font-weight:700;" :style="{color: b.balance>=0 ? 'var(--g-green)' : 'var(--g-red)'}">
+                {{ b.balance >= 0 ? '被欠' : '欠人' }} NZ${{ Math.abs(b.balance).toFixed(2) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expense list -->
+        <div class="sec-title" v-if="splitExpenses.length > 0">📋 費用記錄</div>
+        <div v-for="exp in splitExpenses" :key="exp.id" class="card card-sm">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--g-dark);">{{ exp.description }}</div>
+              <div style="font-size:11px; color:var(--g-mid); margin-top:3px;">
+                👤 {{ exp.paidBy }} 付款 · 分攤：{{ exp.splitWith.join(', ') }}
+              </div>
+              <div style="font-size:11px; color:var(--g-mid);">📅 {{ exp.date }}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:16px; font-weight:800; color:var(--g-blue);">NZ${{ exp.amount.toFixed(2) }}</div>
+              <button class="btn btn-red btn-sm" style="margin-top:4px;" @click="deleteExpense(exp.id)">刪除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: 必買 ══════════════ -->
+      <div v-show="activeTab === 'mustbuy'">
+        <!-- Progress -->
+        <div class="card" style="text-align:center; padding:12px 16px;">
+          <div style="font-size:13px; font-weight:600; color:var(--g-dark); margin-bottom:4px;">
+            已買 {{ boughtCount }} / {{ filteredMustBuy.length }} 件
+          </div>
+          <div class="progress-bg">
+            <div class="progress-fill" :style="{width: progressPct + '%'}"></div>
+          </div>
+          <div style="font-size:11px; color:var(--g-mid); margin-top:2px;">{{ progressPct }}%</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip" :class="{active: mustBuyFilter==='all'}"      @click="mustBuyFilter='all'">全部</span>
+          <span class="chip" :class="{active: mustBuyFilter==='food'}"     @click="mustBuyFilter='food'">🍫 食品</span>
+          <span class="chip" :class="{active: mustBuyFilter==='beauty'}"   @click="mustBuyFilter='beauty'">💄 美妝</span>
+          <span class="chip" :class="{active: mustBuyFilter==='souvenir'}" @click="mustBuyFilter='souvenir'">🎁 紀念品</span>
+        </div>
+
+        <button class="btn btn-primary btn-full" @click="showAddMustBuy=true">＋ 新增項目</button>
+
+        <div class="card">
+          <div v-if="filteredMustBuy.length === 0" class="empty" style="padding:12px;">
+            <p>未有此分類項目</p>
+          </div>
+          <div v-for="item in filteredMustBuy" :key="item.id" class="buy-item" :class="{done: item.bought}">
+            <input type="checkbox" :checked="item.bought" @change="toggleBought(item.id)">
+            <div style="flex:1; min-width:0;">
+              <div class="buy-name">{{ item.name }}</div>
+              <div v-if="item.note" class="buy-note">{{ item.note }}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="badge" :class="mustBuyBadge(item.category)">{{ mustBuyLabel(item.category) }}</span>
+              <button v-if="item.userAdded" class="btn btn-red btn-sm btn-icon" @click="deleteMustBuy(item.id)">🗑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- Bottom Nav -->
+    <nav class="bottomnav">
+      <button class="nav-btn" :class="{active: activeTab==='locations'}"  @click="activeTab='locations'">
+        <span class="nav-icon">📍</span><span>地點</span>
+      </button>
+      <button class="nav-btn" :class="{active: activeTab==='itinerary'}"  @click="activeTab='itinerary'">
+        <span class="nav-icon">📅</span><span>行程</span>
+      </button>
+      <button class="nav-btn" :class="{active: activeTab==='flights'}"    @click="activeTab='flights'">
+        <span class="nav-icon">✈️</span><span>航班</span>
+      </button>
+      <button class="nav-btn" :class="{active: activeTab==='split'}"      @click="activeTab='split'">
+        <span class="nav-icon">💰</span><span>分帳</span>
+      </button>
+      <button class="nav-btn" :class="{active: activeTab==='mustbuy'}"    @click="activeTab='mustbuy'">
+        <span class="nav-icon">🛒</span><span>必買</span>
+      </button>
+    </nav>
+
+  </div><!-- /phone -->
+  <!-- ══ MODAL: 新增地點 ══ -->
+  <transition name="fade">
+  <div v-if="showAddLocation" class="modal-overlay" @click.self="showAddLocation=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>📍 新增地點</h2>
+        <button class="modal-close" @click="showAddLocation=false">✕</button>
+      </div>
+      <div class="input-wrap">
+        <label>名稱</label>
+        <input class="inp" v-model="newLocation.name" placeholder="地點名稱">
+      </div>
+      <div class="input-wrap">
+        <label>主分類</label>
+        <select class="inp" v-model="newLocation.mainCategory">
+          <option value="fandb">🍽️ 食肆</option>
+          <option value="attraction">🏔️ 景點</option>
+          <option value="spa">🛁 水療</option>
+          <option value="hotel">🏨 酒店</option>
+        </select>
+      </div>
+      <div class="input-wrap">
+        <label>子分類（可選）</label>
+        <input class="inp" v-model="newLocation.subCategory" placeholder="例：Cafe、Hotel、步道">
+      </div>
+      <div class="input-wrap">
+        <label>評分（可選）</label>
+        <input class="inp" type="number" v-model="newLocation.rating" placeholder="例：4.5" min="1" max="5" step="0.1">
+      </div>
+      <div class="input-wrap">
+        <label>備註（可選）</label>
+        <input class="inp" v-model="newLocation.notes" placeholder="備註或價格範圍">
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" @click="showAddLocation=false">取消</button>
+        <button class="btn btn-primary" @click="addLocation">新增</button>
+      </div>
+    </div>
+  </div>
+  </transition>
+
+  <!-- ══ MODAL: 新增行程活動 ══ -->
+  <transition name="fade">
+  <div v-if="showAddEvent" class="modal-overlay" @click.self="showAddEvent=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>📅 新增活動</h2>
+        <button class="modal-close" @click="showAddEvent=false">✕</button>
+      </div>
+      <div style="font-size:12px; color:var(--g-mid); margin-bottom:10px;">{{ formatDayHeader(addEventDate) }}</div>
+      <div class="input-wrap">
+        <label>時間</label>
+        <input class="inp" type="time" v-model="newEvent.time">
+      </div>
+      <div class="input-wrap">
+        <label>活動名稱</label>
+        <input class="inp" v-model="newEvent.title" placeholder="例：Skyline Queenstown">
+      </div>
+      <div class="input-wrap">
+        <label>地點（可選）</label>
+        <input class="inp" v-model="newEvent.location" placeholder="例：Queenstown">
+      </div>
+      <div class="input-wrap">
+        <label>備註（可選）</label>
+        <input class="inp" v-model="newEvent.notes" placeholder="備註">
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" @click="showAddEvent=false">取消</button>
+        <button class="btn btn-green" @click="addEvent">新增</button>
+      </div>
+    </div>
+  </div>
+  </transition>
+
+  <!-- ══ MODAL: 新增參與者 ══ -->
+  <transition name="fade">
+  <div v-if="showAddParticipant" class="modal-overlay" @click.self="showAddParticipant=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>👤 新增成員</h2>
+        <button class="modal-close" @click="showAddParticipant=false">✕</button>
+      </div>
+      <div class="input-wrap">
+        <label>姓名</label>
+        <input class="inp" v-model="newParticipant" placeholder="例：阿明、Mary" @keyup.enter="addParticipant">
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" @click="showAddParticipant=false">取消</button>
+        <button class="btn btn-primary" @click="addParticipant">新增</button>
+      </div>
+    </div>
+  </div>
+  </transition>
+
+  <!-- ══ MODAL: 新增費用 ══ -->
+  <transition name="fade">
+  <div v-if="showAddSplitExpense" class="modal-overlay" @click.self="showAddSplitExpense=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>💰 新增費用</h2>
+        <button class="modal-close" @click="showAddSplitExpense=false">✕</button>
+      </div>
+      <div class="input-wrap">
+        <label>描述</label>
+        <input class="inp" v-model="newSplitExpense.description" placeholder="例：午餐、超市">
+      </div>
+      <div class="input-wrap">
+        <label>金額 (NZ$)</label>
+        <input class="inp" type="number" v-model.number="newSplitExpense.amount" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="input-wrap">
+        <label>由誰付款</label>
+        <select class="inp" v-model="newSplitExpense.paidBy">
+          <option value="">選擇付款人</option>
+          <option v-for="p in participants" :key="p" :value="p">{{ p }}</option>
+        </select>
+      </div>
+      <div class="input-wrap">
+        <label>分攤給（可多選）</label>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+          <label v-for="p in participants" :key="p" style="display:flex; align-items:center; gap:5px; font-size:13px; cursor:pointer;">
+            <input type="checkbox" :value="p" v-model="newSplitExpense.splitWith" style="accent-color:var(--g-blue); width:16px; height:16px;">
+            {{ p }}
+          </label>
+        </div>
+      </div>
+      <div class="input-wrap">
+        <label>日期</label>
+        <input class="inp" type="date" v-model="newSplitExpense.date">
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" @click="showAddSplitExpense=false">取消</button>
+        <button class="btn btn-primary" @click="addSplitExpense">新增</button>
+      </div>
+    </div>
+  </div>
+  </transition>
+
+  <!-- ══ MODAL: 新增必買項目 ══ -->
+  <transition name="fade">
+  <div v-if="showAddMustBuy" class="modal-overlay" @click.self="showAddMustBuy=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>🛒 新增必買</h2>
+        <button class="modal-close" @click="showAddMustBuy=false">✕</button>
+      </div>
+      <div class="input-wrap">
+        <label>名稱</label>
+        <input class="inp" v-model="newMustBuyItem.name" placeholder="例：Manuka蜂蜜">
+      </div>
+      <div class="input-wrap">
+        <label>分類</label>
+        <select class="inp" v-model="newMustBuyItem.category">
+          <option value="food">🍫 食品</option>
+          <option value="beauty">💄 美妝</option>
+          <option value="souvenir">🎁 紀念品</option>
+        </select>
+      </div>
+      <div class="input-wrap">
+        <label>備註（可選）</label>
+        <input class="inp" v-model="newMustBuyItem.note" placeholder="例：在機場買">
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" @click="showAddMustBuy=false">取消</button>
+        <button class="btn btn-primary" @click="addMustBuyItem">新增</button>
+      </div>
+    </div>
+  </div>
+  </transition>
+
+</div><!-- /app -->
+<script>
+const { createApp } = Vue;
+
+/* ── Static: pre-loaded locations ── */
+const PRESET_LOCATIONS = [
+  // 食肆
+  { id:'l1',  name:'Astro Cafe',                   mainCategory:'fandb',      subCategory:'Cafe',      rating:4.2, reviews:1238, notes:'NZ$10-20', userAdded:false },
+  { id:'l2',  name:'Patagonia Chocolates',          mainCategory:'fandb',      subCategory:'冰淇淋',    rating:4.5, reviews:4093, notes:'$$',        userAdded:false },
+  { id:'l3',  name:'Cookie Time Bakery',            mainCategory:'fandb',      subCategory:'餅乾',      rating:4.5, reviews:1180, notes:'$',         userAdded:false },
+  { id:'l4',  name:"Perky's - Floating Bar",        mainCategory:'fandb',      subCategory:'酒吧',      rating:4.8, reviews:539,  notes:'NZ$10-20',  userAdded:false },
+  { id:'l5',  name:'Te Kano Estate',                mainCategory:'fandb',      subCategory:'釀酒廠',    rating:4.8, reviews:140,  notes:'',          userAdded:false },
+  // 景點
+  { id:'l6',  name:'Blue Penguins Pukekura',        mainCategory:'attraction', subCategory:'野生動物',  rating:4.8, reviews:746,  notes:'小藍企鵝保護區', userAdded:false },
+  { id:'l7',  name:'Dark Sky Project',              mainCategory:'attraction', subCategory:'觀星',      rating:4.4, reviews:2223, notes:'觀星聖地',  userAdded:false },
+  { id:'l8',  name:'Playground at the lake',        mainCategory:'attraction', subCategory:'遊樂場',    rating:4.9, reviews:31,   notes:'',          userAdded:false },
+  { id:'l9',  name:'好牧羊人教堂',                  mainCategory:'attraction', subCategory:'教堂',      rating:4.6, reviews:6352, notes:'Lake Tekapo 必去', userAdded:false },
+  { id:'l10', name:'Shamarra Alpacas',              mainCategory:'attraction', subCategory:'羊駝牧場',  rating:4.9, reviews:680,  notes:'羊駝牧場',  userAdded:false },
+  { id:'l11', name:'Whale Watch Kaikoura',          mainCategory:'attraction', subCategory:'觀鯨',      rating:4.6, reviews:4612, notes:'觀鯨活動',  userAdded:false },
+  { id:'l12', name:'Ōamaru Penguins',               mainCategory:'attraction', subCategory:'企鵝',      rating:4.3, reviews:3156, notes:'企鵝觀看',  userAdded:false },
+  { id:'l13', name:'Castle Hill',                   mainCategory:'attraction', subCategory:'石灰岩',    rating:null,reviews:null, notes:'石灰岩地形', userAdded:false },
+  { id:'l14', name:'奇異鳥鳥類生態公園',            mainCategory:'attraction', subCategory:'奇異鳥',    rating:4.5, reviews:1940, notes:'',          userAdded:false },
+  { id:'l15', name:'箭鎮',                          mainCategory:'attraction', subCategory:'古鎮',      rating:null,reviews:null, notes:'秋天楓葉',  userAdded:false },
+  { id:'l16', name:'Glenorchy Restored Steamship', mainCategory:'attraction', subCategory:'歷史建築',  rating:4.8, reviews:74,   notes:'Red Shed',  userAdded:false },
+  { id:'l17', name:'Glenorchy Wharf & Viewpoint',  mainCategory:'attraction', subCategory:'景觀',      rating:4.7, reviews:3112, notes:'',          userAdded:false },
+  { id:'l18', name:'瓦卡蒂普湖',                    mainCategory:'attraction', subCategory:'湖泊',      rating:4.8, reviews:598,  notes:'Lake Wakatipu', userAdded:false },
+  { id:'l19', name:'Hooker Valley Track',           mainCategory:'attraction', subCategory:'步道',      rating:null,reviews:null, notes:'庫克山步道', userAdded:false },
+  { id:'l20', name:'庫克山 (Aoraki)',               mainCategory:'attraction', subCategory:'山峰',      rating:null,reviews:null, notes:'紐西蘭最高峰', userAdded:false },
+  { id:'l21', name:'Skyline Queenstown',            mainCategory:'attraction', subCategory:'纜車',      rating:4.6, reviews:13338,notes:'',          userAdded:false },
+  { id:'l22', name:'Lake Tekapo',                   mainCategory:'attraction', subCategory:'湖泊',      rating:null,reviews:null, notes:'絕美蒂卡波湖', userAdded:false },
+  { id:'l23', name:'Lake Wakatipu Viewpoint',       mainCategory:'attraction', subCategory:'景觀',      rating:4.8, reviews:498,  notes:'',          userAdded:false },
+  { id:'l24', name:'Deer Park Heights',             mainCategory:'attraction', subCategory:'景觀',      rating:4.6, reviews:751,  notes:'',          userAdded:false },
+  { id:'l25', name:'Tasman Glacier',                mainCategory:'attraction', subCategory:'冰川',      rating:4.7, reviews:89,   notes:'',          userAdded:false },
+  { id:'l26', name:'Caroline Bay',                  mainCategory:'attraction', subCategory:'海灣',      rating:4.7, reviews:37,   notes:'海邊度假勝地', userAdded:false },
+  { id:'l27', name:'Mount Cook Airport',            mainCategory:'attraction', subCategory:'機場景觀',  rating:4.7, reviews:98,   notes:'',          userAdded:false },
+  // 水療
+  { id:'l28', name:'Opuke Thermal Pools & Spa',    mainCategory:'spa',        subCategory:'溫泉',      rating:4.6, reviews:1403, notes:'',          userAdded:false },
+  { id:'l29', name:'Onsen Hot Pools and Day Spa',  mainCategory:'spa',        subCategory:'水療',      rating:4.7, reviews:4161, notes:'',          userAdded:false },
+  { id:'l30', name:'Hot Tubs Omarama',             mainCategory:'spa',        subCategory:'水療',      rating:4.6, reviews:926,  notes:'',          userAdded:false },
+];
+
+/* ── Static: flights ── */
+const FLIGHTS = [
+  { flightNo:'NZ80',  from:'HKG', to:'AKL', depTime:'7:15pm',  arrTime:'9:50am',  depDate:'30 May (Sat)', arrDate:'31 May (Sun)', duration:'10h 35m', bookingClass:'T' },
+  { flightNo:'NZ539', from:'AKL', to:'CHC', depTime:'12:00pm', arrTime:'1:25pm',  depDate:'31 May (Sun)', arrDate:'31 May (Sun)', duration:'1h 25m',  bookingClass:'T' },
+  { flightNo:'NZ584', from:'CHC', to:'AKL', depTime:'6:45am',  arrTime:'8:10am',  depDate:'9 Jun (Tue)',  arrDate:'9 Jun (Tue)',  duration:'1h 25m',  bookingClass:'G' },
+  { flightNo:'NZ81',  from:'AKL', to:'HKG', depTime:'10:15am', arrTime:'5:45pm',  depDate:'9 Jun (Tue)',  arrDate:'9 Jun (Tue)',  duration:'11h 30m', bookingClass:'G' },
+];
+
+/* ── Static: trip days with pre-filled flight events ── */
+function buildTripDays() {
+  const days = [];
+  const dates = [
+    '2026-05-31','2026-06-01','2026-06-02','2026-06-03','2026-06-04',
+    '2026-06-05','2026-06-06','2026-06-07','2026-06-08','2026-06-09'
+  ];
+  dates.forEach((date, i) => {
+    const events = [];
+    if (date === '2026-05-31') {
+      events.push({ id:'pf1', type:'flight', time:'09:50', title:'抵達奧克蘭 AKL', location:'Auckland International Terminal', notes:'NZ80 來自 HKG', prefilled:true });
+      events.push({ id:'pf2', type:'flight', time:'12:00', title:'AKL → CHC (NZ539)', location:'Auckland → Christchurch', notes:'1h 25m', prefilled:true });
+      events.push({ id:'pf3', type:'hotel',  time:'13:25', title:'抵達基督城，開始旅程！', location:'Christchurch', notes:'', prefilled:true });
+    }
+    if (date === '2026-06-09') {
+      events.push({ id:'pf4', type:'flight', time:'06:45', title:'CHC → AKL (NZ584)', location:'Christchurch → Auckland', notes:'1h 25m', prefilled:true });
+      events.push({ id:'pf5', type:'flight', time:'10:15', title:'AKL → HKG (NZ81)', location:'Auckland International Terminal', notes:'11h 30m · 返港', prefilled:true });
+    }
+    days.push({ date, label:`Day ${i+1}`, events });
+  });
+  return days;
+}
+
+/* ── Static: must-buy items ── */
+const PRESET_MUSTBUY = [
+  { id:'b1',  name:'Manuka蜂蜜',      category:'food',     note:'麥盧卡蜂蜜，越高UMF越好',   bought:false, userAdded:false },
+  { id:'b2',  name:'Cookie Time Cookie', category:'food', note:'朱古力曲奇，NZ手信首選',      bought:false, userAdded:false },
+  { id:'b3',  name:"Whittaker's朱古力", category:'food',  note:'NZ著名朱古力品牌',           bought:false, userAdded:false },
+  { id:'b4',  name:"Pic's Peanut Butter", category:'food',note:'NZ手工花生醬',               bought:false, userAdded:false },
+  { id:'b5',  name:'Proper Crisps',    category:'food',     note:'NZ薯片，口味多',            bought:false, userAdded:false },
+  { id:'b6',  name:'羊脂膏 (Lanolin)', category:'beauty',   note:'護手護唇，機場免稅店有售',  bought:false, userAdded:false },
+  { id:'b7',  name:'綿羊油護膚品',    category:'beauty',   note:'NZ天然護膚',               bought:false, userAdded:false },
+  { id:'b8',  name:"L'Occitane護手霜", category:'beauty',  note:'機場免稅特惠',              bought:false, userAdded:false },
+  { id:'b9',  name:'紐西蘭羊毛產品',  category:'souvenir', note:'羊毛公仔、羊毛氈等',        bought:false, userAdded:false },
+  { id:'b10', name:'Merino羊毛衫',    category:'souvenir', note:'保暖又輕巧',                bought:false, userAdded:false },
+];
+
+/* ══════════════ Vue App ══════════════ */
+createApp({
+  data() {
+    return {
+      activeTab: 'locations',
+      currentTime: '',
+      toastMsg: '',
+
+      // 地點
+      locations: JSON.parse(JSON.stringify(PRESET_LOCATIONS)),
+      locationFilter: 'all',
+      showAddLocation: false,
+      newLocation: { name:'', mainCategory:'attraction', subCategory:'', rating:'', notes:'' },
+
+      // 行程
+      tripDays: buildTripDays(),
+      expandedDay: '2026-05-31',
+      showAddEvent: false,
+      addEventDate: '',
+      newEvent: { time:'', title:'', location:'', notes:'' },
+
+      // 航班
+      flights: FLIGHTS,
+
+      // 分帳
+      participants: [],
+      splitExpenses: [],
+      showAddParticipant: false,
+      showAddSplitExpense: false,
+      newParticipant: '',
+      newSplitExpense: { amount:0, description:'', paidBy:'', date:'', splitWith:[] },
+
+      // 必買
+      mustBuyItems: JSON.parse(JSON.stringify(PRESET_MUSTBUY)),
+      mustBuyFilter: 'all',
+      showAddMustBuy: false,
+      newMustBuyItem: { name:'', category:'food', note:'' },
+    };
+  },
+
+  computed: {
+    filteredLocations() {
+      if (this.locationFilter === 'all') return this.locations;
+      return this.locations.filter(l => l.mainCategory === this.locationFilter);
+    },
+    filteredMustBuy() {
+      if (this.mustBuyFilter === 'all') return this.mustBuyItems;
+      return this.mustBuyItems.filter(i => i.category === this.mustBuyFilter);
+    },
+    boughtCount() {
+      return this.filteredMustBuy.filter(i => i.bought).length;
+    },
+    progressPct() {
+      if (!this.filteredMustBuy.length) return 0;
+      return Math.round(this.boughtCount / this.filteredMustBuy.length * 100);
+    },
+    daysToFlight() {
+      const dep = new Date('2026-05-30T19:15:00+08:00');
+      const now = new Date();
+      const diff = dep - now;
+      if (diff <= 0) return 0;
+      return Math.ceil(diff / 86400000);
+    },
+    balances() {
+      return this.participants.map(p => {
+        let paid = 0, owed = 0;
+        this.splitExpenses.forEach(exp => {
+          if (exp.paidBy === p) paid += exp.amount;
+          if (exp.splitWith.includes(p)) owed += exp.amount / exp.splitWith.length;
+        });
+        return { name: p, paid, balance: paid - owed };
+      });
+    },
+    settlements() {
+      const bs = this.balances.map(b => ({ ...b }));
+      const result = [];
+      const debtors  = bs.filter(b => b.balance < -0.005).sort((a,b) => a.balance - b.balance);
+      const creditors= bs.filter(b => b.balance >  0.005).sort((a,b) => b.balance - a.balance);
+      let di = 0, ci = 0;
+      while (di < debtors.length && ci < creditors.length) {
+        const d = debtors[di], c = creditors[ci];
+        const amt = Math.min(-d.balance, c.balance);
+        result.push({ from: d.name, to: c.name, amount: amt.toFixed(2) });
+        d.balance += amt; c.balance -= amt;
+        if (Math.abs(d.balance) < 0.005) di++;
+        if (Math.abs(c.balance) < 0.005) ci++;
+      }
+      return result;
+    },
+  },
+
+  methods: {
+    /* ── helpers ── */
+    toast(msg) {
+      this.toastMsg = msg;
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => { this.toastMsg = ''; }, 2000);
+    },
+    save() {
+      const payload = {
+        userLocations:   this.locations.filter(l => l.userAdded),
+        tripDayEvents:   this.tripDays.map(d => ({ date: d.date, events: d.events.filter(e => !e.prefilled) })),
+        participants:    this.participants,
+        splitExpenses:   this.splitExpenses,
+        mustBuyItems:    this.mustBuyItems,
+      };
+      localStorage.setItem('nzTravelPlan', JSON.stringify(payload));
+      this.toast('✓ 已儲存');
+    },
+    load() {
+      try {
+        const raw = localStorage.getItem('nzTravelPlan');
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        // user-added locations
+        if (d.userLocations) this.locations.push(...d.userLocations);
+        // user-added events per day
+        if (d.tripDayEvents) {
+          d.tripDayEvents.forEach(saved => {
+            const day = this.tripDays.find(td => td.date === saved.date);
+            if (day) day.events.push(...saved.events);
+          });
+        }
+        if (d.participants)  this.participants  = d.participants;
+        if (d.splitExpenses) this.splitExpenses = d.splitExpenses;
+        if (d.mustBuyItems)  this.mustBuyItems  = d.mustBuyItems;
+      } catch(e) { console.error('load error', e); }
+    },
+
+    /* ── time ── */
+    updateTime() {
+      const n = new Date();
+      this.currentTime = n.toLocaleTimeString('zh-HK', { hour:'2-digit', minute:'2-digit' });
+    },
+
+    /* ── date formatting ── */
+    formatDayHeader(dateStr) {
+      const d = new Date(dateStr + 'T12:00:00');
+      return d.toLocaleDateString('zh-HK', { month:'short', day:'numeric', weekday:'short' });
+    },
+
+    /* ── locations ── */
+    countByCategory(cat) {
+      return this.locations.filter(l => l.mainCategory === cat).length;
+    },
+    categoryEmoji(cat) {
+      return { fandb:'🍽️', attraction:'🏔️', spa:'🛁', hotel:'🏨' }[cat] || '📍';
+    },
+    categoryLabel(cat) {
+      return { fandb:'食肆', attraction:'景點', spa:'水療', hotel:'酒店' }[cat] || cat;
+    },
+    categoryBadge(cat) {
+      return { fandb:'badge-yellow', attraction:'badge-blue', spa:'badge-teal', hotel:'badge-purple' }[cat] || 'badge-gray';
+    },
+    addLocation() {
+      if (!this.newLocation.name.trim()) return;
+      this.locations.push({
+        id: 'u' + Date.now(),
+        name:        this.newLocation.name.trim(),
+        mainCategory:this.newLocation.mainCategory,
+        subCategory: this.newLocation.subCategory.trim(),
+        rating:      this.newLocation.rating ? parseFloat(this.newLocation.rating) : null,
+        reviews:     null,
+        notes:       this.newLocation.notes.trim(),
+        userAdded:   true,
+      });
+      this.newLocation = { name:'', mainCategory:'attraction', subCategory:'', rating:'', notes:'' };
+      this.showAddLocation = false;
+      this.save();
+    },
+    deleteLocation(id) {
+      this.locations = this.locations.filter(l => l.id !== id);
+      this.save();
+    },
+
+    /* ── itinerary ── */
+    toggleDay(date) {
+      this.expandedDay = this.expandedDay === date ? null : date;
+    },
+    sortedEvents(events) {
+      return [...events].sort((a,b) => (a.time||'').localeCompare(b.time||''));
+    },
+    openAddEvent(date) {
+      this.addEventDate = date;
+      this.newEvent = { time:'', title:'', location:'', notes:'' };
+      this.showAddEvent = true;
+    },
+    addEvent() {
+      if (!this.newEvent.title.trim()) return;
+      const day = this.tripDays.find(d => d.date === this.addEventDate);
+      if (!day) return;
+      day.events.push({
+        id:       'e' + Date.now(),
+        type:     'user',
+        time:     this.newEvent.time,
+        title:    this.newEvent.title.trim(),
+        location: this.newEvent.location.trim(),
+        notes:    this.newEvent.notes.trim(),
+        prefilled:false,
+      });
+      this.showAddEvent = false;
+      this.expandedDay = this.addEventDate;
+      this.save();
+    },
+    deleteEvent(date, id) {
+      const day = this.tripDays.find(d => d.date === date);
+      if (day) day.events = day.events.filter(e => e.id !== id);
+      this.save();
+    },
+
+    /* ── bill split ── */
+    addParticipant() {
+      const name = this.newParticipant.trim();
+      if (!name || this.participants.includes(name)) return;
+      this.participants.push(name);
+      this.newParticipant = '';
+      this.showAddParticipant = false;
+      this.save();
+    },
+    removeParticipant(name) {
+      this.participants = this.participants.filter(p => p !== name);
+      this.save();
+    },
+    openAddExpense() {
+      if (!this.participants.length) { this.toast('請先新增參與者'); return; }
+      this.newSplitExpense = { amount:0, description:'', paidBy:'', date: new Date().toISOString().slice(0,10), splitWith:[...this.participants] };
+      this.showAddSplitExpense = true;
+    },
+    addSplitExpense() {
+      const e = this.newSplitExpense;
+      if (!e.description.trim() || !e.amount || !e.paidBy || !e.splitWith.length) return;
+      this.splitExpenses.push({
+        id:          's' + Date.now(),
+        description: e.description.trim(),
+        amount:      parseFloat(e.amount),
+        paidBy:      e.paidBy,
+        date:        e.date,
+        splitWith:   [...e.splitWith],
+      });
+      this.showAddSplitExpense = false;
+      this.save();
+    },
+    deleteExpense(id) {
+      this.splitExpenses = this.splitExpenses.filter(e => e.id !== id);
+      this.save();
+    },
+
+    /* ── must buy ── */
+    mustBuyLabel(cat) {
+      return { food:'食品', beauty:'美妝', souvenir:'紀念品' }[cat] || cat;
+    },
+    mustBuyBadge(cat) {
+      return { food:'badge-yellow', beauty:'badge-purple', souvenir:'badge-green' }[cat] || 'badge-gray';
+    },
+    toggleBought(id) {
+      const item = this.mustBuyItems.find(i => i.id === id);
+      if (item) { item.bought = !item.bought; this.save(); }
+    },
+    addMustBuyItem() {
+      if (!this.newMustBuyItem.name.trim()) return;
+      this.mustBuyItems.push({
+        id:        'm' + Date.now(),
+        name:      this.newMustBuyItem.name.trim(),
+        category:  this.newMustBuyItem.category,
+        note:      this.newMustBuyItem.note.trim(),
+        bought:    false,
+        userAdded: true,
+      });
+      this.newMustBuyItem = { name:'', category:'food', note:'' };
+      this.showAddMustBuy = false;
+      this.save();
+    },
+    deleteMustBuy(id) {
+      this.mustBuyItems = this.mustBuyItems.filter(i => i.id !== id);
+      this.save();
+    },
+  },
+
+  mounted() {
+    this.load();
+    this.updateTime();
+    setInterval(this.updateTime, 30000);
+  },
+}).mount('#app');
+</script>
 </body>
 </html>
