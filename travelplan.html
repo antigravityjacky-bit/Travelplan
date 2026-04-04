@@ -439,6 +439,71 @@
     .fade-enter-active, .fade-leave-active { transition: opacity .2s; }
     .fade-enter-from, .fade-leave-to { opacity: 0; }
 
+    /* ── Google Maps (locations tab) ── */
+    .location-map {
+      height: 220px;
+      border-radius: 12px;
+      margin: 0 16px 10px;
+      overflow: hidden;
+      background: #e8e8e8;
+    }
+    .maps-setup-banner {
+      background: #e8f0fe;
+      color: #1a73e8;
+      padding: 10px 16px;
+      border-radius: 10px;
+      margin: 0 16px 10px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 13px;
+      border: 1px dashed #a8c5fb;
+    }
+    .route-banner {
+      background: #e6f4ea;
+      border: 1px solid #a8d5b5;
+      padding: 10px 12px;
+      margin: 0 16px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .route-banner strong { color: #0d652d; font-size: 14px; }
+    .route-banner .route-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      color: #5f6368;
+      padding: 0 2px;
+    }
+    .select-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--g-blue);
+      background: #fff;
+      color: var(--g-blue);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .select-btn.selected {
+      background: var(--g-blue);
+      color: #fff;
+    }
+    .card { position: relative; }
+
     /* ── Sync badge ── */
     .sync-badge {
       display: inline-flex;
@@ -509,6 +574,31 @@
 
       <!-- ══════════════ TAB: 地點 ══════════════ -->
       <div v-show="activeTab === 'locations'">
+
+        <!-- Maps setup prompt / map container -->
+        <div v-if="!mapsApiKey" class="maps-setup-banner" @click="showMapsKeyModal=true">
+          🗺️ 點此設定 Google Maps API Key 以顯示地圖
+        </div>
+        <div v-if="mapsApiKey" id="locationMap" class="location-map"></div>
+
+        <!-- Route result banner -->
+        <div v-if="routeInfo" class="route-banner">
+          <span>🚗</span>
+          <span style="flex:1; min-width:0;">
+            <strong>{{ selectedForRoute[0].name }}</strong>
+            <span style="color:#5f6368;"> → </span>
+            <strong>{{ selectedForRoute[1].name }}</strong>
+            &nbsp;·&nbsp;{{ routeInfo.duration }}
+            <span style="color:#5f6368;"> ({{ routeInfo.distance }})</span>
+          </span>
+          <button class="route-close" @click="clearRoute">✕</button>
+        </div>
+        <div v-if="selectedForRoute.length === 1 && !routeInfo" class="route-banner" style="background:#fff8e1; border-color:#ffe082;">
+          <span>📍</span>
+          <span>已選「{{ selectedForRoute[0].name }}」，再選一個地點計算駕車時間</span>
+          <button class="route-close" @click="clearRoute">✕</button>
+        </div>
+
         <div class="chips">
           <span class="chip" :class="{active: locationFilter==='all'}"    @click="locationFilter='all'">全部 {{ locations.length }}</span>
           <span class="chip" :class="{active: locationFilter==='fandb'}"  @click="locationFilter='fandb'">🍽️ 食肆</span>
@@ -532,6 +622,11 @@
         </div>
 
         <div v-for="loc in filteredLocations" :key="loc.id" class="card">
+          <!-- Route select button -->
+          <button v-if="mapsApiKey" class="select-btn" :class="{selected: isSelectedForRoute(loc)}"
+            @click.stop="toggleRouteSelect(loc)" :title="isSelectedForRoute(loc) ? '取消選擇' : '選擇計算路線'">
+            {{ isSelectedForRoute(loc) ? '✓' : '+' }}
+          </button>
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
             <div style="flex:1; min-width:0;">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
@@ -1009,6 +1104,48 @@
   </div>
   </transition>
 
+  <!-- ══ MODAL: Google Maps API Key 設定 ══ -->
+  <transition name="fade">
+  <div v-if="showMapsKeyModal" class="modal-overlay" @click.self="showMapsKeyModal=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>🗺️ Google Maps 設定</h2>
+        <button class="modal-close" @click="showMapsKeyModal=false">✕</button>
+      </div>
+      <div style="font-size:13px; color:var(--g-mid); margin-bottom:14px; line-height:1.6;">
+        輸入 Google Maps API Key 後，地點頁面會顯示互動地圖，並可計算兩點之間的駕車時間。
+      </div>
+      <div class="input-wrap">
+        <label>Maps API Key</label>
+        <input class="inp" v-model="mapsKeyInput" placeholder="AIzaSy..." autocomplete="off">
+      </div>
+      <button class="btn btn-primary btn-full" @click="saveMapsKey">儲存並載入地圖</button>
+      <button v-if="mapsApiKey" class="btn btn-outline btn-full" @click="removeMapsKey" style="margin-top:4px;">移除 API Key</button>
+
+      <div class="sec-title" style="margin-top:16px;">📖 取得 API Key 步驟</div>
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <div>打開 <strong>console.cloud.google.com</strong>，選擇你的 Firebase 項目（travel-plan-627c0）</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <div>左側選單 → <strong>API 和服務 → 程式庫</strong>，搜尋並啟用：<br>
+          ① <strong>Maps JavaScript API</strong><br>
+          ② <strong>Directions API</strong>
+        </div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <div>左側 → <strong>憑證 → 建立憑證 → API 金鑰</strong>，複製金鑰</div>
+      </div>
+      <div class="setup-step" style="border-bottom:none;">
+        <div class="step-num">4</div>
+        <div>（建議）點擊金鑰 → <strong>API 限制</strong>，限制只允許上述兩個 API；<strong>應用程式限制</strong>設為你的 GitHub Pages 網址</div>
+      </div>
+    </div>
+  </div>
+  </transition>
+
 </div><!-- /app -->
 <script>
 const { createApp } = Vue;
@@ -1016,38 +1153,38 @@ const { createApp } = Vue;
 /* ── Static: pre-loaded locations ── */
 const PRESET_LOCATIONS = [
   // 食肆
-  { id:'l1',  name:'Astro Cafe',                   mainCategory:'fandb',      subCategory:'Cafe',      rating:4.2, reviews:1238, notes:'NZ$10-20', userAdded:false },
-  { id:'l2',  name:'Patagonia Chocolates',          mainCategory:'fandb',      subCategory:'冰淇淋',    rating:4.5, reviews:4093, notes:'$$',        userAdded:false },
-  { id:'l3',  name:'Cookie Time Bakery',            mainCategory:'fandb',      subCategory:'餅乾',      rating:4.5, reviews:1180, notes:'$',         userAdded:false },
-  { id:'l4',  name:"Perky's - Floating Bar",        mainCategory:'fandb',      subCategory:'酒吧',      rating:4.8, reviews:539,  notes:'NZ$10-20',  userAdded:false },
-  { id:'l5',  name:'Te Kano Estate',                mainCategory:'fandb',      subCategory:'釀酒廠',    rating:4.8, reviews:140,  notes:'',          userAdded:false },
+  { id:'l1',  name:'Astro Cafe',                   mainCategory:'fandb',      subCategory:'Cafe',      rating:4.2, reviews:1238, notes:'NZ$10-20', userAdded:false, lat:-44.0044, lng:170.4774 },
+  { id:'l2',  name:'Patagonia Chocolates',          mainCategory:'fandb',      subCategory:'冰淇淋',    rating:4.5, reviews:4093, notes:'$$',        userAdded:false, lat:-45.0312, lng:168.6626 },
+  { id:'l3',  name:'Cookie Time Bakery',            mainCategory:'fandb',      subCategory:'餅乾',      rating:4.5, reviews:1180, notes:'$',         userAdded:false, lat:-43.5321, lng:172.6362 },
+  { id:'l4',  name:"Perky's - Floating Bar",        mainCategory:'fandb',      subCategory:'酒吧',      rating:4.8, reviews:539,  notes:'NZ$10-20',  userAdded:false, lat:-45.0282, lng:168.6604 },
+  { id:'l5',  name:'Te Kano Estate',                mainCategory:'fandb',      subCategory:'釀酒廠',    rating:4.8, reviews:140,  notes:'',          userAdded:false, lat:-44.6958, lng:169.1497 },
   // 景點
-  { id:'l6',  name:'Blue Penguins Pukekura',        mainCategory:'attraction', subCategory:'野生動物',  rating:4.8, reviews:746,  notes:'小藍企鵝保護區', userAdded:false },
-  { id:'l7',  name:'Dark Sky Project',              mainCategory:'attraction', subCategory:'觀星',      rating:4.4, reviews:2223, notes:'觀星聖地',  userAdded:false },
-  { id:'l8',  name:'Playground at the lake',        mainCategory:'attraction', subCategory:'遊樂場',    rating:4.9, reviews:31,   notes:'',          userAdded:false },
-  { id:'l9',  name:'好牧羊人教堂',                  mainCategory:'attraction', subCategory:'教堂',      rating:4.6, reviews:6352, notes:'Lake Tekapo 必去', userAdded:false },
-  { id:'l10', name:'Shamarra Alpacas',              mainCategory:'attraction', subCategory:'羊駝牧場',  rating:4.9, reviews:680,  notes:'羊駝牧場',  userAdded:false },
-  { id:'l11', name:'Whale Watch Kaikoura',          mainCategory:'attraction', subCategory:'觀鯨',      rating:4.6, reviews:4612, notes:'觀鯨活動',  userAdded:false },
-  { id:'l12', name:'Ōamaru Penguins',               mainCategory:'attraction', subCategory:'企鵝',      rating:4.3, reviews:3156, notes:'企鵝觀看',  userAdded:false },
-  { id:'l13', name:'Castle Hill',                   mainCategory:'attraction', subCategory:'石灰岩',    rating:null,reviews:null, notes:'石灰岩地形', userAdded:false },
-  { id:'l14', name:'奇異鳥鳥類生態公園',            mainCategory:'attraction', subCategory:'奇異鳥',    rating:4.5, reviews:1940, notes:'',          userAdded:false },
-  { id:'l15', name:'箭鎮',                          mainCategory:'attraction', subCategory:'古鎮',      rating:null,reviews:null, notes:'秋天楓葉',  userAdded:false },
-  { id:'l16', name:'Glenorchy Restored Steamship', mainCategory:'attraction', subCategory:'歷史建築',  rating:4.8, reviews:74,   notes:'Red Shed',  userAdded:false },
-  { id:'l17', name:'Glenorchy Wharf & Viewpoint',  mainCategory:'attraction', subCategory:'景觀',      rating:4.7, reviews:3112, notes:'',          userAdded:false },
-  { id:'l18', name:'瓦卡蒂普湖',                    mainCategory:'attraction', subCategory:'湖泊',      rating:4.8, reviews:598,  notes:'Lake Wakatipu', userAdded:false },
-  { id:'l19', name:'Hooker Valley Track',           mainCategory:'attraction', subCategory:'步道',      rating:null,reviews:null, notes:'庫克山步道', userAdded:false },
-  { id:'l20', name:'庫克山 (Aoraki)',               mainCategory:'attraction', subCategory:'山峰',      rating:null,reviews:null, notes:'紐西蘭最高峰', userAdded:false },
-  { id:'l21', name:'Skyline Queenstown',            mainCategory:'attraction', subCategory:'纜車',      rating:4.6, reviews:13338,notes:'',          userAdded:false },
-  { id:'l22', name:'Lake Tekapo',                   mainCategory:'attraction', subCategory:'湖泊',      rating:null,reviews:null, notes:'絕美蒂卡波湖', userAdded:false },
-  { id:'l23', name:'Lake Wakatipu Viewpoint',       mainCategory:'attraction', subCategory:'景觀',      rating:4.8, reviews:498,  notes:'',          userAdded:false },
-  { id:'l24', name:'Deer Park Heights',             mainCategory:'attraction', subCategory:'景觀',      rating:4.6, reviews:751,  notes:'',          userAdded:false },
-  { id:'l25', name:'Tasman Glacier',                mainCategory:'attraction', subCategory:'冰川',      rating:4.7, reviews:89,   notes:'',          userAdded:false },
-  { id:'l26', name:'Caroline Bay',                  mainCategory:'attraction', subCategory:'海灣',      rating:4.7, reviews:37,   notes:'海邊度假勝地', userAdded:false },
-  { id:'l27', name:'Mount Cook Airport',            mainCategory:'attraction', subCategory:'機場景觀',  rating:4.7, reviews:98,   notes:'',          userAdded:false },
+  { id:'l6',  name:'Blue Penguins Pukekura',        mainCategory:'attraction', subCategory:'野生動物',  rating:4.8, reviews:746,  notes:'小藍企鵝保護區', userAdded:false, lat:-45.0966, lng:170.9714 },
+  { id:'l7',  name:'Dark Sky Project',              mainCategory:'attraction', subCategory:'觀星',      rating:4.4, reviews:2223, notes:'觀星聖地',  userAdded:false, lat:-44.0044, lng:170.4774 },
+  { id:'l8',  name:'Playground at the lake',        mainCategory:'attraction', subCategory:'遊樂場',    rating:4.9, reviews:31,   notes:'',          userAdded:false, lat:-44.0058, lng:170.4780 },
+  { id:'l9',  name:'好牧羊人教堂',                  mainCategory:'attraction', subCategory:'教堂',      rating:4.6, reviews:6352, notes:'Lake Tekapo 必去', userAdded:false, lat:-44.0052, lng:170.4784 },
+  { id:'l10', name:'Shamarra Alpacas',              mainCategory:'attraction', subCategory:'羊駝牧場',  rating:4.9, reviews:680,  notes:'羊駝牧場',  userAdded:false, lat:-45.0400, lng:168.7500 },
+  { id:'l11', name:'Whale Watch Kaikoura',          mainCategory:'attraction', subCategory:'觀鯨',      rating:4.6, reviews:4612, notes:'觀鯨活動',  userAdded:false, lat:-42.4007, lng:173.6820 },
+  { id:'l12', name:'Ōamaru Penguins',               mainCategory:'attraction', subCategory:'企鵝',      rating:4.3, reviews:3156, notes:'企鵝觀看',  userAdded:false, lat:-45.0966, lng:170.9714 },
+  { id:'l13', name:'Castle Hill',                   mainCategory:'attraction', subCategory:'石灰岩',    rating:null,reviews:null, notes:'石灰岩地形', userAdded:false, lat:-43.2028, lng:171.7197 },
+  { id:'l14', name:'奇異鳥鳥類生態公園',            mainCategory:'attraction', subCategory:'奇異鳥',    rating:4.5, reviews:1940, notes:'',          userAdded:false, lat:-45.0360, lng:168.6631 },
+  { id:'l15', name:'箭鎮',                          mainCategory:'attraction', subCategory:'古鎮',      rating:null,reviews:null, notes:'秋天楓葉',  userAdded:false, lat:-44.9434, lng:168.8298 },
+  { id:'l16', name:'Glenorchy Restored Steamship', mainCategory:'attraction', subCategory:'歷史建築',  rating:4.8, reviews:74,   notes:'Red Shed',  userAdded:false, lat:-44.8522, lng:168.3769 },
+  { id:'l17', name:'Glenorchy Wharf & Viewpoint',  mainCategory:'attraction', subCategory:'景觀',      rating:4.7, reviews:3112, notes:'',          userAdded:false, lat:-44.8530, lng:168.3760 },
+  { id:'l18', name:'瓦卡蒂普湖',                    mainCategory:'attraction', subCategory:'湖泊',      rating:4.8, reviews:598,  notes:'Lake Wakatipu', userAdded:false, lat:-45.0000, lng:168.6000 },
+  { id:'l19', name:'Hooker Valley Track',           mainCategory:'attraction', subCategory:'步道',      rating:null,reviews:null, notes:'庫克山步道', userAdded:false, lat:-43.7330, lng:170.0965 },
+  { id:'l20', name:'庫克山 (Aoraki)',               mainCategory:'attraction', subCategory:'山峰',      rating:null,reviews:null, notes:'紐西蘭最高峰', userAdded:false, lat:-43.5950, lng:170.1416 },
+  { id:'l21', name:'Skyline Queenstown',            mainCategory:'attraction', subCategory:'纜車',      rating:4.6, reviews:13338,notes:'',          userAdded:false, lat:-45.0312, lng:168.6626 },
+  { id:'l22', name:'Lake Tekapo',                   mainCategory:'attraction', subCategory:'湖泊',      rating:null,reviews:null, notes:'絕美蒂卡波湖', userAdded:false, lat:-44.0044, lng:170.4774 },
+  { id:'l23', name:'Lake Wakatipu Viewpoint',       mainCategory:'attraction', subCategory:'景觀',      rating:4.8, reviews:498,  notes:'',          userAdded:false, lat:-45.0312, lng:168.6626 },
+  { id:'l24', name:'Deer Park Heights',             mainCategory:'attraction', subCategory:'景觀',      rating:4.6, reviews:751,  notes:'',          userAdded:false, lat:-45.0420, lng:168.6560 },
+  { id:'l25', name:'Tasman Glacier',                mainCategory:'attraction', subCategory:'冰川',      rating:4.7, reviews:89,   notes:'',          userAdded:false, lat:-43.6333, lng:170.1333 },
+  { id:'l26', name:'Caroline Bay',                  mainCategory:'attraction', subCategory:'海灣',      rating:4.7, reviews:37,   notes:'海邊度假勝地', userAdded:false, lat:-44.3978, lng:171.2553 },
+  { id:'l27', name:'Mount Cook Airport',            mainCategory:'attraction', subCategory:'機場景觀',  rating:4.7, reviews:98,   notes:'',          userAdded:false, lat:-43.7670, lng:170.1340 },
   // 水療
-  { id:'l28', name:'Opuke Thermal Pools & Spa',    mainCategory:'spa',        subCategory:'溫泉',      rating:4.6, reviews:1403, notes:'',          userAdded:false },
-  { id:'l29', name:'Onsen Hot Pools and Day Spa',  mainCategory:'spa',        subCategory:'水療',      rating:4.7, reviews:4161, notes:'',          userAdded:false },
-  { id:'l30', name:'Hot Tubs Omarama',             mainCategory:'spa',        subCategory:'水療',      rating:4.6, reviews:926,  notes:'',          userAdded:false },
+  { id:'l28', name:'Opuke Thermal Pools & Spa',    mainCategory:'spa',        subCategory:'溫泉',      rating:4.6, reviews:1403, notes:'',          userAdded:false, lat:-43.6490, lng:171.6470 },
+  { id:'l29', name:'Onsen Hot Pools and Day Spa',  mainCategory:'spa',        subCategory:'水療',      rating:4.7, reviews:4161, notes:'',          userAdded:false, lat:-45.0312, lng:168.6626 },
+  { id:'l30', name:'Hot Tubs Omarama',             mainCategory:'spa',        subCategory:'水療',      rating:4.6, reviews:926,  notes:'',          userAdded:false, lat:-44.4833, lng:169.9667 },
 ];
 
 /* ── Static: flights ── */
@@ -1108,6 +1245,13 @@ createApp({
       syncStatusDetail: '',
       showSyncModal: false,
       syncInput: { configJson: '', tripId: '' },
+
+      // Google Maps
+      mapsApiKey: localStorage.getItem('nzMapsKey') || '',
+      mapsKeyInput: '',
+      showMapsKeyModal: false,
+      selectedForRoute: [],   // max 2 location objects
+      routeInfo: null,        // { duration, distance }
 
       // 地點
       locations: JSON.parse(JSON.stringify(PRESET_LOCATIONS)),
@@ -1196,6 +1340,11 @@ createApp({
       }
       return result;
     },
+  },
+
+  watch: {
+    locationFilter() { this.updateMapMarkers(); },
+    mapsApiKey(v)    { if (v) this.$nextTick(() => this.loadMapsApi()); },
   },
 
   methods: {
@@ -1290,6 +1439,118 @@ createApp({
       this.syncStatusDetail = '';
       this.showSyncModal = false;
       this.toast('已斷開雲端同步，改用本地儲存');
+    },
+
+    /* ── Google Maps ── */
+    saveMapsKey() {
+      const key = this.mapsKeyInput.trim();
+      if (!key) { this.toast('請輸入 API Key'); return; }
+      localStorage.setItem('nzMapsKey', key);
+      this.mapsApiKey = key;
+      this.showMapsKeyModal = false;
+      this.toast('✅ API Key 已儲存，載入地圖中...');
+    },
+    removeMapsKey() {
+      localStorage.removeItem('nzMapsKey');
+      this.mapsApiKey = '';
+      this.mapsKeyInput = '';
+      this._mapInstance = null;
+      this._markers = [];
+      this.selectedForRoute = [];
+      this.routeInfo = null;
+      this.showMapsKeyModal = false;
+      this.toast('已移除 Maps API Key');
+    },
+    loadMapsApi() {
+      if (window.google?.maps) { this.$nextTick(() => this.initMap()); return; }
+      const s = document.createElement('script');
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${this.mapsApiKey}&callback=__nzMapInit`;
+      s.async = true; s.defer = true;
+      window.__nzMapInit = () => this.initMap();
+      s.onerror = () => this.toast('Google Maps 載入失敗，請確認 API Key 正確');
+      document.head.appendChild(s);
+    },
+    initMap() {
+      this.$nextTick(() => {
+        const el = document.getElementById('locationMap');
+        if (!el || !window.google?.maps) return;
+        this._mapInstance = new google.maps.Map(el, {
+          center: { lat: -44.2, lng: 170.0 },
+          zoom: 7,
+          disableDefaultUI: true,
+          zoomControl: true,
+          mapTypeControl: false,
+        });
+        this.updateMapMarkers();
+      });
+    },
+    updateMapMarkers() {
+      if (!this._mapInstance || !window.google?.maps) return;
+      // clear old markers
+      (this._markers || []).forEach(m => m.setMap(null));
+      this._markers = [];
+      const infoWindow = new google.maps.InfoWindow();
+      this.filteredLocations.forEach(loc => {
+        if (!loc.lat || !loc.lng) return;
+        const isSelected = this.isSelectedForRoute(loc);
+        const marker = new google.maps.Marker({
+          position: { lat: loc.lat, lng: loc.lng },
+          map: this._mapInstance,
+          title: loc.name,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: isSelected ? 10 : 7,
+            fillColor: isSelected ? '#EA4335' : '#4285F4',
+            fillOpacity: 1,
+            strokeColor: '#fff',
+            strokeWeight: 2,
+          },
+        });
+        marker.addListener('click', () => {
+          infoWindow.setContent(`<div style="font-size:13px; font-weight:600; padding:2px 4px;">${loc.name}</div>`);
+          infoWindow.open(this._mapInstance, marker);
+        });
+        this._markers.push(marker);
+      });
+    },
+    toggleRouteSelect(loc) {
+      if (!loc.lat) { this.toast('此地點未有座標，無法計算路線'); return; }
+      const idx = this.selectedForRoute.findIndex(l => l.id === loc.id);
+      if (idx >= 0) {
+        this.selectedForRoute.splice(idx, 1);
+        this.routeInfo = null;
+      } else if (this.selectedForRoute.length < 2) {
+        this.selectedForRoute.push(loc);
+        if (this.selectedForRoute.length === 2) this.calcDrivingTime();
+      } else {
+        this.toast('最多只能選擇 2 個地點，請先取消已選的');
+      }
+      this.updateMapMarkers();
+    },
+    calcDrivingTime() {
+      const [a, b] = this.selectedForRoute;
+      if (!window.google?.maps) return;
+      const svc = new google.maps.DirectionsService();
+      svc.route({
+        origin:      { lat: a.lat, lng: a.lng },
+        destination: { lat: b.lat, lng: b.lng },
+        travelMode:  google.maps.TravelMode.DRIVING,
+      }, (result, status) => {
+        if (status === 'OK') {
+          const leg = result.routes[0].legs[0];
+          this.routeInfo = { duration: leg.duration.text, distance: leg.distance.text };
+        } else {
+          this.toast('無法取得駕車時間，請確認 Directions API 已啟用');
+        }
+      });
+    },
+    clearRoute() {
+      this.selectedForRoute = [];
+      this.routeInfo = null;
+      this.updateMapMarkers();
+    },
+    isSelectedForRoute(loc) {
+      return this.selectedForRoute.some(l => l.id === loc.id);
     },
 
     /* ── helpers ── */
@@ -1485,6 +1746,7 @@ createApp({
     this.load();
     this.updateTime();
     setInterval(this.updateTime, 30000);
+    if (this.mapsApiKey) this.loadMapsApi();
   },
 }).mount('#app');
 </script>
