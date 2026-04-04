@@ -1238,27 +1238,110 @@ const FLIGHTS = [
   { flightNo:'NZ81',  from:'AKL', to:'HKG', depTime:'10:15am', arrTime:'5:45pm',  depDate:'9 Jun (Tue)',  arrDate:'9 Jun (Tue)',  duration:'11h 30m', bookingClass:'G' },
 ];
 
-/* ── Static: trip days with pre-filled flight events ── */
+/* ── Static: trip days with pre-filled events ── */
 function buildTripDays() {
-  const days = [];
-  const dates = [
-    '2026-05-31','2026-06-01','2026-06-02','2026-06-03','2026-06-04',
-    '2026-06-05','2026-06-06','2026-06-07','2026-06-08','2026-06-09'
+  return [
+    {
+      date: '2026-05-31', label: 'Day 1',
+      events: [
+        { id:'pf1',  type:'flight',      time:'09:50', title:'抵達奧克蘭 AKL',                              location:'Auckland International Terminal', notes:'NZ80 來自 HKG',          prefilled:true },
+        { id:'pf2',  type:'flight',      time:'12:00', title:'AKL → CHC (NZ539)',                          location:'Auckland → Christchurch',         notes:'1h 25m',                  prefilled:true },
+        { id:'pf3',  type:'hotel',       time:'13:25', title:'抵達基督城，攞租車 Check-in',                  location:'基督城 Christchurch',             notes:'長途機後放鬆休息',          prefilled:true },
+        { id:'pf4',  type:'attraction',  time:'15:30', title:'Cardboard Cathedral (紙板過渡大教堂)',         location:'基督城市中心',                    notes:'地震後重建象徵，必看',      prefilled:true, lat:-43.5338, lng:172.6403 },
+        { id:'pf5',  type:'fandb',       time:'17:00', title:'Cookie Time Bakery Shop',                    location:'基督城市中心',                    notes:'手信首選，買曲奇！',        prefilled:true, lat:-43.5321, lng:172.6362 },
+        { id:'pf6',  type:'fandb',       time:'19:00', title:'晚餐：Riverside Market 搵食',                  location:'Riverside Market, Christchurch',  notes:'多元美食廣場',              prefilled:true, lat:-43.5318, lng:172.6364 },
+      ],
+    },
+    {
+      date: '2026-06-01', label: 'Day 2',
+      events: [
+        { id:'pf7',  type:'attraction',  time:'08:30', title:'出發去 Akaroa (約 1.5–2 小時)',               location:'基督城 → Akaroa',                 notes:'沿 Banks Peninsula 山路',  prefilled:true },
+        { id:'pf8',  type:'attraction',  time:'10:30', title:'Shamarra Alpacas (草泥馬牧場)',               location:'Akaroa, Banks Peninsula',         notes:'提前預約！風景極靚',        prefilled:true, lat:-43.7848, lng:172.9692 },
+        { id:'pf9',  type:'fandb',       time:'13:00', title:'Akaroa Salmon 午餐',                          location:'Akaroa 港口',                     notes:'港口直銷三文魚，超新鮮',    prefilled:true, lat:-43.8034, lng:172.9688 },
+        { id:'pf10', type:'attraction',  time:'14:30', title:'Akaroa 小鎮散步',                             location:'Akaroa',                          notes:'法式殖民建築風情小鎮',      prefilled:true, lat:-43.8032, lng:172.9685 },
+        { id:'pf11', type:'hotel',       time:'17:00', title:'揸車返基督城過夜',                             location:'基督城',                          notes:'約 1.5–2 小時車程',        prefilled:true },
+      ],
+    },
+    {
+      date: '2026-06-02', label: 'Day 3',
+      events: [
+        { id:'pf12', type:'attraction',  time:'08:30', title:'由基督城出發，往 Methven',                    location:'基督城 → Methven',                notes:'約 1 小時車程',             prefilled:true },
+        { id:'pf13', type:'spa',         time:'10:00', title:'Opuke Thermal Pools & Spa',                  location:'Methven',                         notes:'溫泉放鬆，建議預約',        prefilled:true, lat:-43.6490, lng:171.6470 },
+        { id:'pf14', type:'attraction',  time:'14:00', title:'抵達 Lake Tekapo，好牧羊人教堂',              location:'Lake Tekapo',                     notes:'必打卡，湖邊小教堂',        prefilled:true, lat:-44.0052, lng:170.4784 },
+        { id:'pf15', type:'attraction',  time:'15:30', title:'Playground at the Lake',                     location:'Lake Tekapo',                     notes:'湖邊遊樂場，放鬆一下',      prefilled:true, lat:-44.0058, lng:170.4780 },
+        { id:'pf16', type:'attraction',  time:'21:00', title:'Dark Sky Project 觀星團',                    location:'Mt John, Lake Tekapo',            notes:'全球最佳觀星地之一，必體驗', prefilled:true, lat:-44.0081, lng:170.4651 },
+      ],
+    },
+    {
+      date: '2026-06-03', label: 'Day 4',
+      events: [
+        { id:'pf17', type:'fandb',       time:'08:30', title:'Astro Cafe (Mt John 山頂咖啡館)',             location:'Mt John, Lake Tekapo',            notes:'360° 全景，飲咖啡睇日出',   prefilled:true, lat:-44.0008, lng:170.4803 },
+        { id:'pf18', type:'attraction',  time:'11:00', title:'Lake Pukaki 打卡',                           location:'Lake Pukaki',                     notes:'雪山倒影，藍綠色湖水',      prefilled:true, lat:-44.1733, lng:170.1317 },
+        { id:'pf19', type:'fandb',       time:'12:00', title:'Mt Cook Alpine Salmon Shop 買三文魚',        location:'Mt Cook Village',                 notes:'湖邊食三文魚，超正',        prefilled:true, lat:-43.7357, lng:170.0987 },
+        { id:'pf20', type:'attraction',  time:'14:00', title:'Hooker Valley Track 健行',                   location:'Aoraki/Mt Cook National Park',    notes:'來回約 3 小時，路平，風景絕美', prefilled:true, lat:-43.7330, lng:170.0965 },
+        { id:'pf21', type:'attraction',  time:'17:30', title:'Tasman Glacier 塔斯曼冰川觀景',              location:'Aoraki/Mt Cook National Park',    notes:'冰川觀景台',                prefilled:true, lat:-43.6333, lng:170.1333 },
+        { id:'pf22', type:'attraction',  time:'18:30', title:'Mount Cook Airport (可選：直升機覽冰川)',     location:'Mt Cook Airport',                 notes:'有預算可坐直升機睇冰川',    prefilled:true, lat:-43.7670, lng:170.1340 },
+      ],
+    },
+    {
+      date: '2026-06-04', label: 'Day 5',
+      events: [
+        { id:'pf23', type:'attraction',  time:'09:00', title:'離開庫克山，途經 Twizel',                    location:'Twizel',                          notes:'MacKenzie Basin 小鎮',      prefilled:true, lat:-44.2528, lng:170.1011 },
+        { id:'pf24', type:'fandb',       time:'09:30', title:'Highland Salmon 高地鄉村鮭魚',               location:'Twizel 附近，Lake Ōhau',          notes:'餵魚同買三文魚',            prefilled:true, lat:-44.2411, lng:169.8682 },
+        { id:'pf25', type:'spa',         time:'12:00', title:'Hot Tubs Omarama (私人木桶溫泉)',            location:'Omarama',                         notes:'私人木桶，浸溫泉放鬆',      prefilled:true, lat:-44.4833, lng:169.9667 },
+        { id:'pf26', type:'attraction',  time:'15:00', title:'經 Lindis Pass 揸車去 Wanaka',              location:'Lindis Pass → Wanaka',            notes:'山口風景優美，約 1.5 小時', prefilled:true },
+        { id:'pf27', type:'attraction',  time:'17:30', title:'That Wanaka Tree (孤獨樹)',                  location:'Lake Wanaka, Wanaka',             notes:'Instagram 打卡名所',        prefilled:true, lat:-44.6956, lng:169.1347 },
+      ],
+    },
+    {
+      date: '2026-06-05', label: 'Day 6',
+      events: [
+        { id:'pf28', type:'attraction',  time:'09:00', title:'由 Wanaka 揸車去 Cromwell',                 location:'Wanaka → Cromwell',               notes:'約 40 分鐘車程',            prefilled:true },
+        { id:'pf29', type:'fandb',       time:'09:45', title:'Jackson Orchards 果園',                     location:'Cromwell, Central Otago',         notes:'新鮮生果、雪糕，秋天必去',  prefilled:true, lat:-45.0437, lng:169.2034 },
+        { id:'pf30', type:'fandb',       time:'11:00', title:'Te Kano Estate 酒莊品酒',                   location:'Cromwell, Central Otago',         notes:'Central Otago 黑皮諾紅酒',  prefilled:true, lat:-44.6958, lng:169.1497 },
+        { id:'pf31', type:'hotel',       time:'13:30', title:'抵達皇后鎮 (Queenstown)，Check-in',         location:'Queenstown',                      notes:'',                          prefilled:true },
+        { id:'pf32', type:'attraction',  time:'15:00', title:'Skyline Queenstown 纜車上山',               location:'Queenstown',                      notes:'俯瞰全鎮及 Wakatipu 湖',    prefilled:true, lat:-45.0251, lng:168.6543 },
+        { id:'pf33', type:'fandb',       time:'18:30', title:'Fergburger 晚餐',                           location:'Queenstown 市中心',               notes:'必試！超大份漢堡，避開繁忙時段', prefilled:true, lat:-45.0306, lng:168.6614 },
+        { id:'pf34', type:'fandb',       time:'20:00', title:'Patagonia Chocolates 雪糕',                 location:'Queenstown 市中心',               notes:'飯後甜點，多種口味',        prefilled:true, lat:-45.0321, lng:168.6617 },
+      ],
+    },
+    {
+      date: '2026-06-06', label: 'Day 7',
+      events: [
+        { id:'pf35', type:'attraction',  time:'09:00', title:'沿 Lake Wakatipu 揸車去 Glenorchy',         location:'Queenstown → Glenorchy',          notes:'全球最美公路之一，約 45 分鐘', prefilled:true, lat:-45.0010, lng:168.7284 },
+        { id:'pf36', type:'attraction',  time:'10:00', title:'Glenorchy Wharf & Viewpoint',               location:'Glenorchy',                       notes:'魔戒取景地，山湖美景',      prefilled:true, lat:-44.8530, lng:168.3760 },
+        { id:'pf37', type:'attraction',  time:'10:30', title:'Glenorchy Red Shed (紅屋仔)',               location:'Glenorchy',                       notes:'修復蒸汽船倉庫，打卡必去',  prefilled:true, lat:-44.8522, lng:168.3769 },
+        { id:'pf38', type:'attraction',  time:'13:00', title:'返回皇后鎮',                                location:'Glenorchy → Queenstown',          notes:'',                          prefilled:true },
+        { id:'pf39', type:'fandb',       time:'17:30', title:"Perky's Floating Bar (水上酒吧)",          location:'Queenstown 湖邊',                 notes:'湖上酒吧，夕陽美景配酒',    prefilled:true, lat:-45.0282, lng:168.6604 },
+      ],
+    },
+    {
+      date: '2026-06-07', label: 'Day 8',
+      events: [
+        { id:'pf40', type:'attraction',  time:'09:30', title:'Arrowtown 箭鎮金礦小鎮',                   location:'Arrowtown',                       notes:'秋楓美景，中國金礦村歷史',  prefilled:true, lat:-44.9434, lng:168.8298 },
+        { id:'pf41', type:'attraction',  time:'13:00', title:'Deer Park Heights (開車入去餵動物)',        location:'Queenstown',                      notes:'魔戒取景地，俯瞰全鎮，可餵野生動物', prefilled:true, lat:-45.0420, lng:168.6560 },
+        { id:'pf42', type:'attraction',  time:'15:30', title:'Kiwi Birdlife Park 奇異鳥生態公園',        location:'Queenstown',                      notes:'睇紐西蘭國鳥奇異鳥',        prefilled:true, lat:-45.0360, lng:168.6631 },
+        { id:'pf43', type:'spa',         time:'20:00', title:'Onsen Hot Pools (日式溫泉)',                location:'Queenstown',                      notes:'望沙特歐瓦河景，需預約',    prefilled:true, lat:-44.9847, lng:168.6904 },
+      ],
+    },
+    {
+      date: '2026-06-08', label: 'Day 9',
+      events: [
+        { id:'pf44', type:'attraction',  time:'08:30', title:'早出發，長途開車返基督城',                  location:'Queenstown → Christchurch',       notes:'約 6–7 小時，建議早出發',   prefilled:true },
+        { id:'pf45', type:'fandb',       time:'11:00', title:'中途在 Twizel 或 Tekapo 休息食嘢',         location:'Twizel / Lake Tekapo',            notes:'Lake Pukaki 再打卡一次',    prefilled:true, lat:-44.0044, lng:170.4774 },
+        { id:'pf46', type:'hotel',       time:'15:30', title:'抵達基督城，還車，Check-in',               location:'基督城 Christchurch',             notes:'',                          prefilled:true },
+        { id:'pf47', type:'fandb',       time:'18:30', title:'最後晚餐 & 補買手信',                      location:'基督城市中心',                    notes:'最後機會衝刺買嘢！',        prefilled:true },
+      ],
+    },
+    {
+      date: '2026-06-09', label: 'Day 10',
+      events: [
+        { id:'pf48', type:'hotel',       time:'05:00', title:'前往基督城機場 Check-in',                  location:'基督城國際機場',                  notes:'早起，建議 05:00 到機場',   prefilled:true },
+        { id:'pf49', type:'flight',      time:'06:45', title:'CHC → AKL (NZ584)',                        location:'Christchurch → Auckland',         notes:'1h 25m',                    prefilled:true },
+        { id:'pf50', type:'flight',      time:'10:15', title:'AKL → HKG (NZ81)',                        location:'Auckland International Terminal', notes:'11h 30m · 返港',            prefilled:true },
+      ],
+    },
   ];
-  dates.forEach((date, i) => {
-    const events = [];
-    if (date === '2026-05-31') {
-      events.push({ id:'pf1', type:'flight', time:'09:50', title:'抵達奧克蘭 AKL', location:'Auckland International Terminal', notes:'NZ80 來自 HKG', prefilled:true });
-      events.push({ id:'pf2', type:'flight', time:'12:00', title:'AKL → CHC (NZ539)', location:'Auckland → Christchurch', notes:'1h 25m', prefilled:true });
-      events.push({ id:'pf3', type:'hotel',  time:'13:25', title:'抵達基督城，開始旅程！', location:'Christchurch', notes:'', prefilled:true });
-    }
-    if (date === '2026-06-09') {
-      events.push({ id:'pf4', type:'flight', time:'06:45', title:'CHC → AKL (NZ584)', location:'Christchurch → Auckland', notes:'1h 25m', prefilled:true });
-      events.push({ id:'pf5', type:'flight', time:'10:15', title:'AKL → HKG (NZ81)', location:'Auckland International Terminal', notes:'11h 30m · 返港', prefilled:true });
-    }
-    days.push({ date, label:`Day ${i+1}`, events });
-  });
-  return days;
 }
 
 /* ── Static: must-buy items ── */
