@@ -8,6 +8,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root {
       --g-blue:   #4285F4;
@@ -575,11 +577,8 @@
       <!-- ══════════════ TAB: 地點 ══════════════ -->
       <div v-show="activeTab === 'locations'">
 
-        <!-- Maps setup prompt / map container -->
-        <div v-if="!mapsApiKey" class="maps-setup-banner" @click="showMapsKeyModal=true">
-          🗺️ 點此設定 Google Maps API Key 以顯示地圖
-        </div>
-        <div v-if="mapsApiKey" id="locationMap" class="location-map"></div>
+        <!-- Map (Leaflet + OpenStreetMap, always visible) -->
+        <div id="locationMap" class="location-map"></div>
 
         <!-- Route result banner -->
         <div v-if="routeInfo" class="route-banner">
@@ -623,7 +622,7 @@
 
         <div v-for="loc in filteredLocations" :key="loc.id" class="card">
           <!-- Route select button -->
-          <button v-if="mapsApiKey" class="select-btn" :class="{selected: isSelectedForRoute(loc)}"
+          <button class="select-btn" :class="{selected: isSelectedForRoute(loc)}"
             @click.stop="toggleRouteSelect(loc)" :title="isSelectedForRoute(loc) ? '取消選擇' : '選擇計算路線'">
             {{ isSelectedForRoute(loc) ? '✓' : '+' }}
           </button>
@@ -1104,47 +1103,7 @@
   </div>
   </transition>
 
-  <!-- ══ MODAL: Google Maps API Key 設定 ══ -->
-  <transition name="fade">
-  <div v-if="showMapsKeyModal" class="modal-overlay" @click.self="showMapsKeyModal=false">
-    <div class="modal-box">
-      <div class="modal-head">
-        <h2>🗺️ Google Maps 設定</h2>
-        <button class="modal-close" @click="showMapsKeyModal=false">✕</button>
-      </div>
-      <div style="font-size:13px; color:var(--g-mid); margin-bottom:14px; line-height:1.6;">
-        輸入 Google Maps API Key 後，地點頁面會顯示互動地圖，並可計算兩點之間的駕車時間。
-      </div>
-      <div class="input-wrap">
-        <label>Maps API Key</label>
-        <input class="inp" v-model="mapsKeyInput" placeholder="AIzaSy..." autocomplete="off">
-      </div>
-      <button class="btn btn-primary btn-full" @click="saveMapsKey">儲存並載入地圖</button>
-      <button v-if="mapsApiKey" class="btn btn-outline btn-full" @click="removeMapsKey" style="margin-top:4px;">移除 API Key</button>
 
-      <div class="sec-title" style="margin-top:16px;">📖 取得 API Key 步驟</div>
-      <div class="setup-step">
-        <div class="step-num">1</div>
-        <div>打開 <strong>console.cloud.google.com</strong>，選擇你的 Firebase 項目（travel-plan-627c0）</div>
-      </div>
-      <div class="setup-step">
-        <div class="step-num">2</div>
-        <div>左側選單 → <strong>API 和服務 → 程式庫</strong>，搜尋並啟用：<br>
-          ① <strong>Maps JavaScript API</strong><br>
-          ② <strong>Directions API</strong>
-        </div>
-      </div>
-      <div class="setup-step">
-        <div class="step-num">3</div>
-        <div>左側 → <strong>憑證 → 建立憑證 → API 金鑰</strong>，複製金鑰</div>
-      </div>
-      <div class="setup-step" style="border-bottom:none;">
-        <div class="step-num">4</div>
-        <div>（建議）點擊金鑰 → <strong>API 限制</strong>，限制只允許上述兩個 API；<strong>應用程式限制</strong>設為你的 GitHub Pages 網址</div>
-      </div>
-    </div>
-  </div>
-  </transition>
 
 </div><!-- /app -->
 <script>
@@ -1246,10 +1205,7 @@ createApp({
       showSyncModal: false,
       syncInput: { configJson: '', tripId: '' },
 
-      // Google Maps
-      mapsApiKey: localStorage.getItem('nzMapsKey') || '',
-      mapsKeyInput: '',
-      showMapsKeyModal: false,
+      // 地圖 (Leaflet + OSRM)
       selectedForRoute: [],   // max 2 location objects
       routeInfo: null,        // { duration, distance }
 
@@ -1344,7 +1300,6 @@ createApp({
 
   watch: {
     locationFilter() { this.updateMapMarkers(); },
-    mapsApiKey(v)    { if (v) this.$nextTick(() => this.loadMapsApi()); },
   },
 
   methods: {
@@ -1441,75 +1396,42 @@ createApp({
       this.toast('已斷開雲端同步，改用本地儲存');
     },
 
-    /* ── Google Maps ── */
-    saveMapsKey() {
-      const key = this.mapsKeyInput.trim();
-      if (!key) { this.toast('請輸入 API Key'); return; }
-      localStorage.setItem('nzMapsKey', key);
-      this.mapsApiKey = key;
-      this.showMapsKeyModal = false;
-      this.toast('✅ API Key 已儲存，載入地圖中...');
-    },
-    removeMapsKey() {
-      localStorage.removeItem('nzMapsKey');
-      this.mapsApiKey = '';
-      this.mapsKeyInput = '';
-      this._mapInstance = null;
-      this._markers = [];
-      this.selectedForRoute = [];
-      this.routeInfo = null;
-      this.showMapsKeyModal = false;
-      this.toast('已移除 Maps API Key');
-    },
-    loadMapsApi() {
-      if (window.google?.maps) { this.$nextTick(() => this.initMap()); return; }
-      const s = document.createElement('script');
-      s.src = `https://maps.googleapis.com/maps/api/js?key=${this.mapsApiKey}&callback=__nzMapInit`;
-      s.async = true; s.defer = true;
-      window.__nzMapInit = () => this.initMap();
-      s.onerror = () => this.toast('Google Maps 載入失敗，請確認 API Key 正確');
-      document.head.appendChild(s);
-    },
+    /* ── 地圖 (Leaflet + OpenStreetMap，完全免費) ── */
     initMap() {
       this.$nextTick(() => {
         const el = document.getElementById('locationMap');
-        if (!el || !window.google?.maps) return;
-        this._mapInstance = new google.maps.Map(el, {
-          center: { lat: -44.2, lng: 170.0 },
-          zoom: 7,
-          disableDefaultUI: true,
-          zoomControl: true,
-          mapTypeControl: false,
-        });
+        if (!el || this._mapInstance) return;
+        this._mapInstance = L.map(el, { zoomControl: true, attributionControl: false })
+          .setView([-44.2, 170.0], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+        }).addTo(this._mapInstance);
+        // small attribution
+        L.control.attribution({ prefix: false })
+          .addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>')
+          .addTo(this._mapInstance);
         this.updateMapMarkers();
       });
     },
     updateMapMarkers() {
-      if (!this._mapInstance || !window.google?.maps) return;
-      // clear old markers
-      (this._markers || []).forEach(m => m.setMap(null));
+      if (!this._mapInstance) return;
+      (this._markers || []).forEach(m => m.remove());
       this._markers = [];
-      const infoWindow = new google.maps.InfoWindow();
       this.filteredLocations.forEach(loc => {
         if (!loc.lat || !loc.lng) return;
         const isSelected = this.isSelectedForRoute(loc);
-        const marker = new google.maps.Marker({
-          position: { lat: loc.lat, lng: loc.lng },
-          map: this._mapInstance,
-          title: loc.name,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: isSelected ? 10 : 7,
-            fillColor: isSelected ? '#EA4335' : '#4285F4',
-            fillOpacity: 1,
-            strokeColor: '#fff',
-            strokeWeight: 2,
-          },
+        const color = isSelected ? '#EA4335' : '#4285F4';
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="width:${isSelected?14:10}px;height:${isSelected?14:10}px;
+                   background:${color};border:2px solid #fff;border-radius:50%;
+                   box-shadow:0 1px 3px rgba(0,0,0,.4);"></div>`,
+          iconSize: [isSelected ? 14 : 10, isSelected ? 14 : 10],
+          iconAnchor: [isSelected ? 7 : 5, isSelected ? 7 : 5],
         });
-        marker.addListener('click', () => {
-          infoWindow.setContent(`<div style="font-size:13px; font-weight:600; padding:2px 4px;">${loc.name}</div>`);
-          infoWindow.open(this._mapInstance, marker);
-        });
+        const marker = L.marker([loc.lat, loc.lng], { icon })
+          .addTo(this._mapInstance)
+          .bindPopup(`<b style="font-size:12px;">${loc.name}</b>`);
         this._markers.push(marker);
       });
     },
@@ -1527,22 +1449,26 @@ createApp({
       }
       this.updateMapMarkers();
     },
-    calcDrivingTime() {
+    async calcDrivingTime() {
       const [a, b] = this.selectedForRoute;
-      if (!window.google?.maps) return;
-      const svc = new google.maps.DirectionsService();
-      svc.route({
-        origin:      { lat: a.lat, lng: a.lng },
-        destination: { lat: b.lat, lng: b.lng },
-        travelMode:  google.maps.TravelMode.DRIVING,
-      }, (result, status) => {
-        if (status === 'OK') {
-          const leg = result.routes[0].legs[0];
-          this.routeInfo = { duration: leg.duration.text, distance: leg.distance.text };
+      // OSRM public routing API — 完全免費，無需 API Key
+      const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`;
+      try {
+        const res  = await fetch(url);
+        const data = await res.json();
+        if (data.code === 'Ok' && data.routes.length) {
+          const r = data.routes[0];
+          const mins = Math.round(r.duration / 60);
+          const km   = (r.distance / 1000).toFixed(0);
+          const h = Math.floor(mins / 60), m = mins % 60;
+          const durationText = h > 0 ? `${h} 小時 ${m} 分鐘` : `${m} 分鐘`;
+          this.routeInfo = { duration: durationText, distance: `${km} km` };
         } else {
-          this.toast('無法取得駕車時間，請確認 Directions API 已啟用');
+          this.toast('路線計算失敗，請稍後再試');
         }
-      });
+      } catch(e) {
+        this.toast('路線計算失敗，請確認網絡連接');
+      }
     },
     clearRoute() {
       this.selectedForRoute = [];
@@ -1746,7 +1672,7 @@ createApp({
     this.load();
     this.updateTime();
     setInterval(this.updateTime, 30000);
-    if (this.mapsApiKey) this.loadMapsApi();
+    this.$nextTick(() => this.initMap());
   },
 }).mount('#app');
 </script>
