@@ -262,8 +262,36 @@
       border-top: none;
       border-bottom-left-radius: 12px;
       border-bottom-right-radius: 12px;
-      padding: 12px 14px 10px;
+      padding: 0 0 10px;
       margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .day-body-inner { padding: 12px 14px 2px; }
+
+    /* Per-day route map */
+    .day-map {
+      height: 220px;
+      background: #e8eaf0;
+      border-bottom: 1px solid var(--g-border);
+    }
+
+    /* Route connector between events */
+    .route-conn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 1px 0 3px 4px;
+      margin-left: -1px;
+    }
+
+    /* Event photo */
+    .ev-photo {
+      width: 72px;
+      height: 58px;
+      object-fit: cover;
+      border-radius: 6px;
+      flex-shrink: 0;
+      background: #e8eaf0;
     }
 
     /* ── Flight card ── */
@@ -683,25 +711,72 @@
 
           <!-- Day body -->
           <div v-show="expandedDay===day.date" class="day-body">
-            <div v-if="day.events.length === 0" class="empty" style="padding:16px;">
-              <p>點擊 ＋ 新增活動</p>
-            </div>
-            <div v-else class="timeline">
-              <div v-for="ev in sortedEvents(day.events)" :key="ev.id" class="tl-item">
-                <div class="tl-dot" :class="ev.type==='flight'?'blue':ev.type==='hotel'?'yellow':'green'"></div>
-                <div class="card card-sm" style="margin-bottom:6px;">
-                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div style="flex:1; min-width:0;">
-                      <div style="font-size:11px; color:var(--g-mid); margin-bottom:2px;">
-                        {{ ev.time }} <span v-if="ev.type==='flight'" class="badge badge-blue" style="margin-left:4px;">✈️ 航班</span>
-                      </div>
-                      <div style="font-size:13px; font-weight:700; color:var(--g-dark);">{{ ev.title }}</div>
-                      <div v-if="ev.location" style="font-size:12px; color:var(--g-mid); margin-top:2px;">📍 {{ ev.location }}</div>
-                      <div v-if="ev.notes" style="font-size:12px; color:var(--g-mid); margin-top:2px;">{{ ev.notes }}</div>
-                    </div>
-                    <button v-if="!ev.prefilled" class="btn btn-red btn-sm btn-icon" style="margin-left:8px;" @click="deleteEvent(day.date, ev.id)">🗑</button>
+
+            <!-- ① Per-day route mini-map -->
+            <div :id="`dayMap-${day.date}`" class="day-map"
+                 v-show="dayHasGeoEvents(day)"></div>
+
+            <div class="day-body-inner">
+              <div v-if="day.events.length === 0" class="empty" style="padding:4px 0 8px;">
+                <p>點擊 ＋ 新增活動</p>
+              </div>
+              <div v-else class="timeline">
+                <template v-for="(ev, idx) in sortedEvents(day.events)" :key="ev.id">
+
+                  <!-- ③ Route connector: distance + drive time from last geo stop -->
+                  <div v-if="getRouteToEvent(day.date, ev.id)" class="route-conn">
+                    <span class="badge badge-blue" style="font-size:10px; padding:1px 6px;">
+                      🚗 {{ getRouteToEvent(day.date, ev.id).duration }}
+                    </span>
+                    <span class="badge badge-gray" style="font-size:10px; padding:1px 6px;">
+                      {{ getRouteToEvent(day.date, ev.id).distance }}
+                    </span>
                   </div>
-                </div>
+
+                  <!-- Event card -->
+                  <div class="tl-item">
+                    <div class="tl-dot"
+                         :class="ev.type==='flight'?'blue':ev.type==='hotel'?'yellow':'green'"></div>
+                    <div class="card card-sm" style="margin-bottom:6px;">
+                      <div style="display:flex; justify-content:space-between;
+                                  align-items:flex-start; gap:8px;">
+                        <!-- Text -->
+                        <div style="flex:1; min-width:0;">
+                          <div style="font-size:11px; color:var(--g-mid); margin-bottom:2px;">
+                            {{ ev.time }}
+                            <span v-if="ev.type==='flight'" class="badge badge-blue"
+                                  style="margin-left:4px;">✈️ 航班</span>
+                            <span v-else-if="ev.type==='hotel'" class="badge badge-yellow"
+                                  style="margin-left:4px;">🏨 住宿</span>
+                            <span v-else-if="ev.type==='spa'" class="badge badge-teal"
+                                  style="margin-left:4px;">🛁 Spa</span>
+                          </div>
+                          <div style="font-size:13px; font-weight:700; color:var(--g-dark);">
+                            {{ ev.title }}
+                          </div>
+                          <div v-if="ev.location"
+                               style="font-size:12px; color:var(--g-mid); margin-top:2px;">
+                            📍 {{ ev.location }}
+                          </div>
+                          <div v-if="ev.notes"
+                               style="font-size:12px; color:var(--g-mid); margin-top:2px;">
+                            {{ ev.notes }}
+                          </div>
+                        </div>
+                        <!-- ② Reference photo -->
+                        <img v-if="getEventPhoto(ev)"
+                             :src="getEventPhoto(ev)"
+                             class="ev-photo"
+                             loading="lazy"
+                             @error="$event.target.style.display='none'">
+                        <!-- Delete -->
+                        <button v-if="!ev.prefilled"
+                                class="btn btn-red btn-sm btn-icon"
+                                @click="deleteEvent(day.date, ev.id)">🗑</button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </div>
             </div>
           </div>
@@ -1186,48 +1261,48 @@ const { createApp } = Vue;
 /* ── Static: pre-loaded locations ── */
 const PRESET_LOCATIONS = [
   // 食肆
-  { id:'l1',  name:'Astro Cafe',                                    mainCategory:'fandb',      subCategory:'Cafe',    rating:4.2, reviews:1238,  notes:'NZ$10-20',                userAdded:false, lat:-44.0008, lng:170.4803 },
-  { id:'l2',  name:'Patagonia Chocolates - Ice Creamery & Chocolaterie', mainCategory:'fandb', subCategory:'冰淇淋',  rating:4.5, reviews:4093,  notes:'$$',                      userAdded:false, lat:-45.0321, lng:168.6617 },
-  { id:'l3',  name:'Cookie Time Bakery Shop Christchurch',          mainCategory:'fandb',      subCategory:'餅乾',    rating:4.5, reviews:1180,  notes:'$',                       userAdded:false, lat:-43.5321, lng:172.6362 },
-  { id:'l4',  name:"Perky's - Floating Bar",                        mainCategory:'fandb',      subCategory:'酒吧',    rating:4.8, reviews:539,   notes:'NZ$10-20',                userAdded:false, lat:-45.0282, lng:168.6604 },
-  { id:'l5',  name:'Te Kano Estate',                                mainCategory:'fandb',      subCategory:'釀酒廠',  rating:4.8, reviews:140,   notes:'',                        userAdded:false, lat:-44.6958, lng:169.1497 },
-  { id:'l34', name:'Jackson Orchards',                              mainCategory:'fandb',      subCategory:'果園',    rating:4.4, reviews:105,   notes:'Central Otago果園',       userAdded:false, lat:-45.0437, lng:169.2034 },
-  { id:'l36', name:'Akaroa Salmon',                                 mainCategory:'fandb',      subCategory:'海鮮',    rating:4.5, reviews:620,   notes:'Akaroa港口三文魚直銷',    userAdded:false, lat:-43.8034, lng:172.9688 },
-  { id:'l37', name:'Mt Cook Alpine Salmon Shop',                    mainCategory:'fandb',      subCategory:'海鮮',    rating:4.6, reviews:415,   notes:'庫克山村三文魚零售店',    userAdded:false, lat:-43.7357, lng:170.0987 },
-  { id:'l38', name:'高地鄉村鮭魚 (Highland Salmon)',               mainCategory:'fandb',      subCategory:'海鮮',    rating:4.4, reviews:193,   notes:'Twizel附近Lake Ōhau鮭魚', userAdded:false, lat:-44.2411, lng:169.8682 },
-  { id:'l39', name:'Fergburger',                                    mainCategory:'fandb',      subCategory:'漢堡',    rating:4.6, reviews:28440, notes:'皇后鎮著名大漢堡，必試',  userAdded:false, lat:-45.0306, lng:168.6614 },
+  { id:'l1',  name:'Astro Cafe',                                    mainCategory:'fandb',      subCategory:'Cafe',    rating:4.2, reviews:1238,  notes:'NZ$10-20',                userAdded:false, lat:-44.0008, lng:170.4803, wikiTitle:'Mount John University Observatory' },
+  { id:'l2',  name:'Patagonia Chocolates - Ice Creamery & Chocolaterie', mainCategory:'fandb', subCategory:'冰淇淋',  rating:4.5, reviews:4093,  notes:'$$',                      userAdded:false, lat:-45.0321, lng:168.6617, wikiTitle:'Queenstown, New Zealand' },
+  { id:'l3',  name:'Cookie Time Bakery Shop Christchurch',          mainCategory:'fandb',      subCategory:'餅乾',    rating:4.5, reviews:1180,  notes:'$',                       userAdded:false, lat:-43.5321, lng:172.6362, wikiTitle:'Christchurch' },
+  { id:'l4',  name:"Perky's - Floating Bar",                        mainCategory:'fandb',      subCategory:'酒吧',    rating:4.8, reviews:539,   notes:'NZ$10-20',                userAdded:false, lat:-45.0282, lng:168.6604, wikiTitle:'Queenstown, New Zealand' },
+  { id:'l5',  name:'Te Kano Estate',                                mainCategory:'fandb',      subCategory:'釀酒廠',  rating:4.8, reviews:140,   notes:'',                        userAdded:false, lat:-44.6958, lng:169.1497, wikiTitle:'Central Otago wine region' },
+  { id:'l34', name:'Jackson Orchards',                              mainCategory:'fandb',      subCategory:'果園',    rating:4.4, reviews:105,   notes:'Central Otago果園',       userAdded:false, lat:-45.0437, lng:169.2034, wikiTitle:'Cromwell, New Zealand' },
+  { id:'l36', name:'Akaroa Salmon',                                 mainCategory:'fandb',      subCategory:'海鮮',    rating:4.5, reviews:620,   notes:'Akaroa港口三文魚直銷',    userAdded:false, lat:-43.8034, lng:172.9688, wikiTitle:'Akaroa' },
+  { id:'l37', name:'Mt Cook Alpine Salmon Shop',                    mainCategory:'fandb',      subCategory:'海鮮',    rating:4.6, reviews:415,   notes:'庫克山村三文魚零售店',    userAdded:false, lat:-43.7357, lng:170.0987, wikiTitle:'Aoraki / Mount Cook National Park' },
+  { id:'l38', name:'高地鄉村鮭魚 (Highland Salmon)',               mainCategory:'fandb',      subCategory:'海鮮',    rating:4.4, reviews:193,   notes:'Twizel附近Lake Ōhau鮭魚', userAdded:false, lat:-44.2411, lng:169.8682, wikiTitle:'Lake Ōhau' },
+  { id:'l39', name:'Fergburger',                                    mainCategory:'fandb',      subCategory:'漢堡',    rating:4.6, reviews:28440, notes:'皇后鎮著名大漢堡，必試',  userAdded:false, lat:-45.0306, lng:168.6614, wikiTitle:'Fergburger' },
   // 景點
-  { id:'l6',  name:'Blue Penguins Pukekura',                        mainCategory:'attraction', subCategory:'野生動物',rating:4.8, reviews:746,   notes:'小藍企鵝保護區',          userAdded:false, lat:-45.1014, lng:170.9597 },
-  { id:'l7',  name:'Dark Sky Project',                              mainCategory:'attraction', subCategory:'觀星',    rating:4.4, reviews:2223,  notes:'觀星聖地',                userAdded:false, lat:-44.0081, lng:170.4651 },
-  { id:'l8',  name:'Playground at the lake',                        mainCategory:'attraction', subCategory:'遊樂場',  rating:4.9, reviews:31,    notes:'',                        userAdded:false, lat:-44.0058, lng:170.4780 },
-  { id:'l9',  name:'好牧羊人教堂',                                  mainCategory:'attraction', subCategory:'教堂',    rating:4.6, reviews:6352,  notes:'Lake Tekapo 必去',        userAdded:false, lat:-44.0052, lng:170.4784 },
-  { id:'l10', name:'Shamarra Alpacas',                              mainCategory:'attraction', subCategory:'羊駝牧場',rating:4.9, reviews:680,   notes:'羊駝牧場',                userAdded:false, lat:-45.0400, lng:168.7500 },
-  { id:'l11', name:'Whale Watch Kaikoura',                          mainCategory:'attraction', subCategory:'觀鯨',    rating:4.6, reviews:4612,  notes:'觀鯨活動',                userAdded:false, lat:-42.4007, lng:173.6820 },
-  { id:'l12', name:'Ōamaru Penguins',                               mainCategory:'attraction', subCategory:'企鵝',    rating:4.3, reviews:3156,  notes:'企鵝觀看',                userAdded:false, lat:-45.0977, lng:170.9723 },
-  { id:'l13', name:'Castle Hill',                                   mainCategory:'attraction', subCategory:'石灰岩',  rating:null,reviews:null,  notes:'石灰岩地形',              userAdded:false, lat:-43.2028, lng:171.7197 },
-  { id:'l14', name:'奇異鳥鳥類生態公園',                           mainCategory:'attraction', subCategory:'奇異鳥',  rating:4.5, reviews:1940,  notes:'',                        userAdded:false, lat:-45.0360, lng:168.6631 },
-  { id:'l15', name:'箭鎮',                                          mainCategory:'attraction', subCategory:'古鎮',    rating:null,reviews:null,  notes:'秋天楓葉',                userAdded:false, lat:-44.9434, lng:168.8298 },
-  { id:'l16', name:'Glenorchy Restored Steamship Depot (Red Shed)', mainCategory:'attraction', subCategory:'歷史建築',rating:4.8, reviews:74,    notes:'Red Shed',                userAdded:false, lat:-44.8522, lng:168.3769 },
-  { id:'l17', name:'Glenorchy Wharf & Viewpoint',                  mainCategory:'attraction', subCategory:'景觀',    rating:4.7, reviews:3112,  notes:'',                        userAdded:false, lat:-44.8530, lng:168.3760 },
-  { id:'l18', name:'瓦卡蒂普湖',                                    mainCategory:'attraction', subCategory:'湖泊',    rating:4.8, reviews:598,   notes:'Lake Wakatipu',           userAdded:false, lat:-45.0000, lng:168.6000 },
-  { id:'l19', name:'Hooker Valley Track',                           mainCategory:'attraction', subCategory:'步道',    rating:null,reviews:null,  notes:'庫克山步道',              userAdded:false, lat:-43.7330, lng:170.0965 },
-  { id:'l20', name:'庫克山 (Aoraki)',                               mainCategory:'attraction', subCategory:'山峰',    rating:null,reviews:null,  notes:'紐西蘭最高峰',            userAdded:false, lat:-43.5950, lng:170.1416 },
-  { id:'l21', name:'Skyline Queenstown',                            mainCategory:'attraction', subCategory:'纜車',    rating:4.6, reviews:13338, notes:'',                        userAdded:false, lat:-45.0251, lng:168.6543 },
-  { id:'l22', name:'Lake Tekapo',                                   mainCategory:'attraction', subCategory:'湖泊',    rating:null,reviews:null,  notes:'絕美蒂卡波湖',            userAdded:false, lat:-44.0044, lng:170.4774 },
-  { id:'l23', name:'Lake Wakatipu Viewpoint',                       mainCategory:'attraction', subCategory:'景觀',    rating:4.8, reviews:503,   notes:'',                        userAdded:false, lat:-45.0010, lng:168.7284 },
-  { id:'l24', name:'Deer Park Heights Queenstown',                  mainCategory:'attraction', subCategory:'景觀',    rating:4.6, reviews:751,   notes:'',                        userAdded:false, lat:-45.0420, lng:168.6560 },
-  { id:'l25', name:'Tasman Glacier',                                mainCategory:'attraction', subCategory:'冰川',    rating:4.7, reviews:89,    notes:'',                        userAdded:false, lat:-43.6333, lng:170.1333 },
-  { id:'l26', name:'Caroline Bay',                                  mainCategory:'attraction', subCategory:'海灣',    rating:4.7, reviews:37,    notes:'海邊度假勝地',            userAdded:false, lat:-44.3978, lng:171.2553 },
-  { id:'l27', name:'Mount Cook Airport',                            mainCategory:'attraction', subCategory:'機場景觀',rating:4.7, reviews:98,    notes:'',                        userAdded:false, lat:-43.7670, lng:170.1340 },
-  { id:'l31', name:'卡提奇燈塔 (Katiki Point)',                     mainCategory:'attraction', subCategory:'燈塔',    rating:null,reviews:null,  notes:'Ōamaru附近燈塔',          userAdded:false, lat:-45.0755, lng:170.9970 },
-  { id:'l32', name:'Twizel',                                        mainCategory:'attraction', subCategory:'小鎮',    rating:null,reviews:null,  notes:'MacKenzie Basin小鎮',     userAdded:false, lat:-44.2528, lng:170.1011 },
-  { id:'l33', name:'奇阿點 (Kea Point)',                            mainCategory:'attraction', subCategory:'景觀',    rating:null,reviews:null,  notes:'庫克山景觀步道終點',      userAdded:false, lat:-43.7442, lng:170.1038 },
-  { id:'l35', name:'Cardboard Cathedral',                           mainCategory:'attraction', subCategory:'教堂',    rating:4.4, reviews:2105,  notes:'基督城紙板過渡大教堂',    userAdded:false, lat:-43.5338, lng:172.6403 },
-  { id:'l40', name:'That Wanaka Tree (瓦納卡小樹)',                 mainCategory:'attraction', subCategory:'景觀',    rating:4.7, reviews:9812,  notes:'Instagram著名孤樹',       userAdded:false, lat:-44.6956, lng:169.1347 },
+  { id:'l6',  name:'Blue Penguins Pukekura',                        mainCategory:'attraction', subCategory:'野生動物',rating:4.8, reviews:746,   notes:'小藍企鵝保護區',          userAdded:false, lat:-45.1014, lng:170.9597, wikiTitle:'Little penguin' },
+  { id:'l7',  name:'Dark Sky Project',                              mainCategory:'attraction', subCategory:'觀星',    rating:4.4, reviews:2223,  notes:'觀星聖地',                userAdded:false, lat:-44.0081, lng:170.4651, wikiTitle:'Aoraki Mackenzie International Dark Sky Reserve' },
+  { id:'l8',  name:'Playground at the lake',                        mainCategory:'attraction', subCategory:'遊樂場',  rating:4.9, reviews:31,    notes:'',                        userAdded:false, lat:-44.0058, lng:170.4780, wikiTitle:'Lake Tekapo' },
+  { id:'l9',  name:'好牧羊人教堂',                                  mainCategory:'attraction', subCategory:'教堂',    rating:4.6, reviews:6352,  notes:'Lake Tekapo 必去',        userAdded:false, lat:-44.0052, lng:170.4784, wikiTitle:'Church of the Good Shepherd (Lake Tekapo)' },
+  { id:'l10', name:'Shamarra Alpacas',                              mainCategory:'attraction', subCategory:'羊駝牧場',rating:4.9, reviews:680,   notes:'羊駝牧場',                userAdded:false, lat:-45.0400, lng:168.7500, wikiTitle:'Alpaca' },
+  { id:'l11', name:'Whale Watch Kaikoura',                          mainCategory:'attraction', subCategory:'觀鯨',    rating:4.6, reviews:4612,  notes:'觀鯨活動',                userAdded:false, lat:-42.4007, lng:173.6820, wikiTitle:'Kaikōura' },
+  { id:'l12', name:'Ōamaru Penguins',                               mainCategory:'attraction', subCategory:'企鵝',    rating:4.3, reviews:3156,  notes:'企鵝觀看',                userAdded:false, lat:-45.0977, lng:170.9723, wikiTitle:'Ōamaru' },
+  { id:'l13', name:'Castle Hill',                                   mainCategory:'attraction', subCategory:'石灰岩',  rating:null,reviews:null,  notes:'石灰岩地形',              userAdded:false, lat:-43.2028, lng:171.7197, wikiTitle:'Castle Hill, New Zealand' },
+  { id:'l14', name:'奇異鳥鳥類生態公園',                           mainCategory:'attraction', subCategory:'奇異鳥',  rating:4.5, reviews:1940,  notes:'',                        userAdded:false, lat:-45.0360, lng:168.6631, wikiTitle:'Kiwi (bird)' },
+  { id:'l15', name:'箭鎮',                                          mainCategory:'attraction', subCategory:'古鎮',    rating:null,reviews:null,  notes:'秋天楓葉',                userAdded:false, lat:-44.9434, lng:168.8298, wikiTitle:'Arrowtown' },
+  { id:'l16', name:'Glenorchy Restored Steamship Depot (Red Shed)', mainCategory:'attraction', subCategory:'歷史建築',rating:4.8, reviews:74,    notes:'Red Shed',                userAdded:false, lat:-44.8522, lng:168.3769, wikiTitle:'Glenorchy, New Zealand' },
+  { id:'l17', name:'Glenorchy Wharf & Viewpoint',                  mainCategory:'attraction', subCategory:'景觀',    rating:4.7, reviews:3112,  notes:'',                        userAdded:false, lat:-44.8530, lng:168.3760, wikiTitle:'Glenorchy, New Zealand' },
+  { id:'l18', name:'瓦卡蒂普湖',                                    mainCategory:'attraction', subCategory:'湖泊',    rating:4.8, reviews:598,   notes:'Lake Wakatipu',           userAdded:false, lat:-45.0000, lng:168.6000, wikiTitle:'Lake Wakatipu' },
+  { id:'l19', name:'Hooker Valley Track',                           mainCategory:'attraction', subCategory:'步道',    rating:null,reviews:null,  notes:'庫克山步道',              userAdded:false, lat:-43.7330, lng:170.0965, wikiTitle:'Hooker Valley' },
+  { id:'l20', name:'庫克山 (Aoraki)',                               mainCategory:'attraction', subCategory:'山峰',    rating:null,reviews:null,  notes:'紐西蘭最高峰',            userAdded:false, lat:-43.5950, lng:170.1416, wikiTitle:'Aoraki / Mount Cook' },
+  { id:'l21', name:'Skyline Queenstown',                            mainCategory:'attraction', subCategory:'纜車',    rating:4.6, reviews:13338, notes:'',                        userAdded:false, lat:-45.0251, lng:168.6543, wikiTitle:'Queenstown, New Zealand' },
+  { id:'l22', name:'Lake Tekapo',                                   mainCategory:'attraction', subCategory:'湖泊',    rating:null,reviews:null,  notes:'絕美蒂卡波湖',            userAdded:false, lat:-44.0044, lng:170.4774, wikiTitle:'Lake Tekapo' },
+  { id:'l23', name:'Lake Wakatipu Viewpoint',                       mainCategory:'attraction', subCategory:'景觀',    rating:4.8, reviews:503,   notes:'',                        userAdded:false, lat:-45.0010, lng:168.7284, wikiTitle:'Lake Wakatipu' },
+  { id:'l24', name:'Deer Park Heights Queenstown',                  mainCategory:'attraction', subCategory:'景觀',    rating:4.6, reviews:751,   notes:'',                        userAdded:false, lat:-45.0420, lng:168.6560, wikiTitle:'Deer Park Heights' },
+  { id:'l25', name:'Tasman Glacier',                                mainCategory:'attraction', subCategory:'冰川',    rating:4.7, reviews:89,    notes:'',                        userAdded:false, lat:-43.6333, lng:170.1333, wikiTitle:'Tasman Glacier' },
+  { id:'l26', name:'Caroline Bay',                                  mainCategory:'attraction', subCategory:'海灣',    rating:4.7, reviews:37,    notes:'海邊度假勝地',            userAdded:false, lat:-44.3978, lng:171.2553, wikiTitle:'Timaru' },
+  { id:'l27', name:'Mount Cook Airport',                            mainCategory:'attraction', subCategory:'機場景觀',rating:4.7, reviews:98,    notes:'',                        userAdded:false, lat:-43.7670, lng:170.1340, wikiTitle:'Aoraki / Mount Cook' },
+  { id:'l31', name:'卡提奇燈塔 (Katiki Point)',                     mainCategory:'attraction', subCategory:'燈塔',    rating:null,reviews:null,  notes:'Ōamaru附近燈塔',          userAdded:false, lat:-45.0755, lng:170.9970, wikiTitle:'Ōamaru' },
+  { id:'l32', name:'Twizel',                                        mainCategory:'attraction', subCategory:'小鎮',    rating:null,reviews:null,  notes:'MacKenzie Basin小鎮',     userAdded:false, lat:-44.2528, lng:170.1011, wikiTitle:'Twizel' },
+  { id:'l33', name:'奇阿點 (Kea Point)',                            mainCategory:'attraction', subCategory:'景觀',    rating:null,reviews:null,  notes:'庫克山景觀步道終點',      userAdded:false, lat:-43.7442, lng:170.1038, wikiTitle:'Aoraki / Mount Cook National Park' },
+  { id:'l35', name:'Cardboard Cathedral',                           mainCategory:'attraction', subCategory:'教堂',    rating:4.4, reviews:2105,  notes:'基督城紙板過渡大教堂',    userAdded:false, lat:-43.5338, lng:172.6403, wikiTitle:'Cardboard Cathedral' },
+  { id:'l40', name:'That Wanaka Tree (瓦納卡小樹)',                 mainCategory:'attraction', subCategory:'景觀',    rating:4.7, reviews:9812,  notes:'Instagram著名孤樹',       userAdded:false, lat:-44.6956, lng:169.1347, wikiTitle:'Lake Wānaka' },
   // 水療
-  { id:'l28', name:'Opuke Thermal Pools & Spa',                    mainCategory:'spa',        subCategory:'溫泉',    rating:4.6, reviews:1403,  notes:'',                        userAdded:false, lat:-43.6490, lng:171.6470 },
-  { id:'l29', name:'Onsen Hot Pools and Day Spa',                  mainCategory:'spa',        subCategory:'水療',    rating:4.7, reviews:4161,  notes:'',                        userAdded:false, lat:-44.9847, lng:168.6904 },
-  { id:'l30', name:'Hot Tubs Omarama',                             mainCategory:'spa',        subCategory:'水療',    rating:4.6, reviews:926,   notes:'',                        userAdded:false, lat:-44.4833, lng:169.9667 },
+  { id:'l28', name:'Opuke Thermal Pools & Spa',                    mainCategory:'spa',        subCategory:'溫泉',    rating:4.6, reviews:1403,  notes:'',                        userAdded:false, lat:-43.6490, lng:171.6470, wikiTitle:'Methven, New Zealand' },
+  { id:'l29', name:'Onsen Hot Pools and Day Spa',                  mainCategory:'spa',        subCategory:'水療',    rating:4.7, reviews:4161,  notes:'',                        userAdded:false, lat:-44.9847, lng:168.6904, wikiTitle:'Queenstown, New Zealand' },
+  { id:'l30', name:'Hot Tubs Omarama',                             mainCategory:'spa',        subCategory:'水療',    rating:4.6, reviews:926,   notes:'',                        userAdded:false, lat:-44.4833, lng:169.9667, wikiTitle:'Omarama' },
 ];
 
 /* ── Static: flights ── */
@@ -1394,6 +1469,8 @@ createApp({
       tripDays: buildTripDays(),
       expandedDay: '2026-05-31',
       newEvent: { time:'', title:'', location:'', notes:'' },
+      photoCache: {},   // wikiTitle → image URL (null = loading/failed)
+      routeCache: {},   // 'lat,lng|lat,lng' → { duration, distance }
 
       // 航班
       flights: FLIGHTS,
@@ -1830,6 +1907,112 @@ createApp({
       this._itinMarkers = [];
     },
 
+    /* ── per-day map + photos + routes ── */
+    dayHasGeoEvents(day) {
+      return day.events.some(e => e.lat && e.lng);
+    },
+    loadDayData(date) {
+      const day = this.tripDays.find(d => d.date === date);
+      if (!day) return;
+      const geoEvs = this.sortedEvents(day.events).filter(e => e.lat && e.lng);
+      // init map
+      this.initDayMap(date, geoEvs);
+      // routes between consecutive geo stops
+      for (let i = 1; i < geoEvs.length; i++) {
+        this.fetchRouteBetween(geoEvs[i - 1], geoEvs[i]);
+      }
+      // photos: look up wikiTitle via location name match
+      geoEvs.forEach(ev => {
+        const loc = this.locations.find(l => l.name === ev.title);
+        if (loc?.wikiTitle && !(loc.wikiTitle in this.photoCache)) {
+          this.fetchWikiPhoto(loc.wikiTitle);
+        }
+      });
+    },
+    initDayMap(date, geoEvs) {
+      if (this._dayMapInst) { this._dayMapInst.remove(); this._dayMapInst = null; }
+      if (!geoEvs.length) return;
+      const el = document.getElementById(`dayMap-${date}`);
+      if (!el) return;
+      const map = L.map(el, {
+        zoomControl: false, attributionControl: false, scrollWheelZoom: false,
+      }).setView([geoEvs[0].lat, geoEvs[0].lng], 9);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      // dashed route polyline
+      const latlngs = geoEvs.map(e => [e.lat, e.lng]);
+      if (latlngs.length > 1) {
+        L.polyline(latlngs, { color:'#1a73e8', weight:3, opacity:.85, dashArray:'8,5' }).addTo(map);
+      }
+      // numbered markers
+      geoEvs.forEach((ev, i) => {
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="width:22px;height:22px;background:#1a73e8;color:#fff;
+                   border:2px solid #fff;border-radius:50%;display:flex;align-items:center;
+                   justify-content:center;font-size:11px;font-weight:700;
+                   box-shadow:0 2px 5px rgba(0,0,0,.45);">${i + 1}</div>`,
+          iconSize: [22, 22], iconAnchor: [11, 11],
+        });
+        L.marker([ev.lat, ev.lng], { icon })
+          .bindPopup(`<b style="font-size:12px;">${ev.time ? ev.time + ' · ' : ''}${ev.title}</b>`)
+          .addTo(map);
+      });
+      map.fitBounds(L.latLngBounds(latlngs).pad(0.25));
+      this._dayMapInst = map;
+    },
+    getRouteToEvent(dayDate, evId) {
+      const day = this.tripDays.find(d => d.date === dayDate);
+      if (!day) return null;
+      const sorted = this.sortedEvents(day.events);
+      const idx = sorted.findIndex(e => e.id === evId);
+      if (idx <= 0) return null;
+      const cur = sorted[idx];
+      if (!cur.lat || !cur.lng) return null;
+      for (let i = idx - 1; i >= 0; i--) {
+        const prev = sorted[i];
+        if (prev.lat && prev.lng) {
+          const key = `${prev.lat},${prev.lng}|${cur.lat},${cur.lng}`;
+          return this.routeCache[key] || null;
+        }
+      }
+      return null;
+    },
+    async fetchRouteBetween(from, to) {
+      const key = `${from.lat},${from.lng}|${to.lat},${to.lng}`;
+      if (key in this.routeCache) return;
+      this.routeCache[key] = null; // mark in-flight
+      const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`;
+      try {
+        const data = await (await fetch(url)).json();
+        if (data.code === 'Ok' && data.routes?.length) {
+          const r = data.routes[0];
+          const mins = Math.round(r.duration / 60);
+          const km   = Math.round(r.distance / 1000);
+          const h = Math.floor(mins / 60), m = mins % 60;
+          this.routeCache = {
+            ...this.routeCache,
+            [key]: { duration: h > 0 ? `${h}h${m > 0 ? ` ${m}min` : ''}` : `${m}min`, distance: `${km} km` },
+          };
+        }
+      } catch (_) {}
+    },
+    getEventPhoto(ev) {
+      const loc = this.locations.find(l => l.name === ev.title);
+      if (!loc?.wikiTitle) return null;
+      return this.photoCache[loc.wikiTitle] || null;
+    },
+    async fetchWikiPhoto(wikiTitle) {
+      if (wikiTitle in this.photoCache) return;
+      this.photoCache[wikiTitle] = null; // mark in-flight
+      try {
+        const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`;
+        const json = await (await fetch(url)).json();
+        if (json.thumbnail?.source) {
+          this.photoCache = { ...this.photoCache, [wikiTitle]: json.thumbnail.source };
+        }
+      } catch (_) {}
+    },
+
     /* ── helpers ── */
     toast(msg) {
       this.toastMsg = msg;
@@ -1918,7 +2101,9 @@ createApp({
 
     /* ── itinerary ── */
     toggleDay(date) {
-      this.expandedDay = this.expandedDay === date ? null : date;
+      const opening = this.expandedDay !== date;
+      this.expandedDay = opening ? date : null;
+      if (opening) this.$nextTick(() => this.loadDayData(date));
     },
     sortedEvents(events) {
       return [...events].sort((a,b) => (a.time||'').localeCompare(b.time||''));
@@ -2001,7 +2186,11 @@ createApp({
     this.load();
     this.updateTime();
     setInterval(this.updateTime, 30000);
-    this.$nextTick(() => this.initMap());
+    this.$nextTick(() => {
+      this.initMap();
+      // Pre-load data for the default expanded day
+      if (this.expandedDay) this.loadDayData(this.expandedDay);
+    });
   },
 }).mount('#app');
 </script>
