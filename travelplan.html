@@ -53,6 +53,165 @@
       .phone { border-radius: 0; min-height: 100dvh; }
     }
 
+    /* ── Tab wrapper base (mobile-first) ── */
+    .tab-locations-wrap { display: flex; flex-direction: column; }
+    .loc-list-panel { padding: 0; }
+    .loc-map-panel { order: -1; /* map first on mobile */ }
+    /* On mobile the location-map default CSS already applies (220px, border-radius, margin) */
+
+    .tab-itinerary-wrap { display: flex; flex-direction: column; margin: -14px -14px 0; }
+    .itin-content-row { display: flex; flex-direction: column; }
+    .itin-list-panel { /* normal flow on mobile */ }
+    .itin-map-panel { order: -1; /* map first on mobile, below tabs */ }
+
+    /* ── PC Layout (≥768px) ── */
+    @media (min-width: 768px) {
+      body { padding: 0; background: #d8dce6; align-items: stretch; }
+      #app { width: 100%; min-height: 100vh; align-items: stretch; }
+
+      /* Full-viewport grid: sidebar | (header / content) */
+      .phone {
+        max-width: 100%;
+        width: 100%;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+        display: grid;
+        grid-template-areas:
+          "sidebar header"
+          "sidebar content";
+        grid-template-columns: 200px 1fr;
+        grid-template-rows: auto 1fr;
+        overflow: hidden;
+      }
+
+      /* Hide fake phone status bar */
+      .statusbar { display: none; }
+
+      /* Header spans the top-right area */
+      .appheader {
+        grid-area: header;
+        text-align: left;
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        border-bottom: 1px solid rgba(255,255,255,.2);
+      }
+      .appheader h1 { font-size: 18px; }
+      .appheader p { margin-top: 0; }
+      .sync-badge { margin-top: 0; margin-left: auto; }
+
+      /* Content area fills grid cell */
+      .content {
+        grid-area: content;
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Sidebar nav (left) */
+      .bottomnav {
+        grid-area: sidebar;
+        flex-direction: column;
+        border-top: none;
+        border-right: 1px solid var(--g-border);
+        padding: 16px 10px;
+        align-items: stretch;
+        gap: 4px;
+        background: #fff;
+        overflow-y: auto;
+      }
+      .nav-btn {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        text-align: left;
+      }
+      .nav-btn .nav-icon { font-size: 20px; }
+
+      /* ── Locations tab: list | map ── */
+      .tab-locations-wrap {
+        flex-direction: row;
+        height: 100%;
+        overflow: hidden;
+      }
+      .loc-list-panel {
+        width: 400px;
+        flex-shrink: 0;
+        overflow-y: auto;
+        padding: 14px;
+        border-right: 1px solid var(--g-border);
+      }
+      .loc-map-panel {
+        flex: 1;
+        order: 0;
+        overflow: hidden;
+      }
+      .loc-map-panel .location-map {
+        height: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+      }
+
+      /* ── Itinerary tab: timeline | map ── */
+      .tab-itinerary-wrap {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .tab-itinerary-wrap .itin-tabs {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        flex-shrink: 0;
+      }
+      .itin-content-row {
+        flex: 1;
+        flex-direction: row;
+        overflow: hidden;
+        min-height: 0;
+      }
+      .itin-list-panel {
+        width: 440px;
+        flex-shrink: 0;
+        overflow-y: auto;
+        border-right: 1px solid var(--g-border);
+      }
+      .itin-map-panel {
+        flex: 1;
+        overflow: hidden;
+        background: #e8eaf0;
+      }
+      .itin-map-panel #currentDayMap {
+        height: 100% !important;
+        display: block !important;
+      }
+      .itin-map-panel .day-map {
+        height: 100% !important;
+      }
+
+      /* ── Other tabs: centered container ── */
+      [v-show] > .countdown-card,
+      .content > div > .countdown-card { max-width: 600px; margin-left: auto; margin-right: auto; }
+
+      /* Simple tabs: scrollable with padding */
+      .tab-simple-wrap { padding: 20px 24px; overflow-y: auto; height: 100%; max-width: 760px; }
+
+      /* Modal: centered on PC */
+      .modal-overlay { align-items: center; }
+      .modal-box { border-radius: 16px; max-height: 80vh; max-width: 520px; }
+
+      /* Toast position */
+      .toast { bottom: 24px; }
+    }
+
     /* ── Status bar ── */
     .statusbar {
       background: var(--g-teal);
@@ -664,95 +823,103 @@
     <div class="content">
 
       <!-- ══════════════ TAB: 地點 ══════════════ -->
-      <div v-show="activeTab === 'locations'">
+      <div v-show="activeTab === 'locations'" class="tab-locations-wrap">
 
-        <!-- Map (Leaflet + OpenStreetMap, always visible) -->
-        <div id="locationMap" class="location-map"></div>
+        <!-- List panel (chips, stats, location cards) -->
+        <div class="loc-list-panel">
 
-        <!-- Route result banner -->
-        <div v-if="routeInfo" class="route-banner">
-          <span>🚗</span>
-          <span style="flex:1; min-width:0;">
-            <strong>{{ selectedForRoute[0].name }}</strong>
-            <span style="color:#5f6368;"> → </span>
-            <strong>{{ selectedForRoute[1].name }}</strong>
-            &nbsp;·&nbsp;{{ routeInfo.duration }}
-            <span style="color:#5f6368;"> ({{ routeInfo.distance }})</span>
-          </span>
-          <button class="route-close" @click="clearRoute">✕</button>
-        </div>
-        <div v-if="selectedForRoute.length === 1 && !routeInfo" class="route-banner" style="background:#fff8e1; border-color:#ffe082;">
-          <span>📍</span>
-          <span>已選「{{ selectedForRoute[0].name }}」，再選一個地點計算駕車時間</span>
-          <button class="route-close" @click="clearRoute">✕</button>
-        </div>
+          <!-- Route result banner -->
+          <div v-if="routeInfo" class="route-banner">
+            <span>🚗</span>
+            <span style="flex:1; min-width:0;">
+              <strong>{{ selectedForRoute[0].name }}</strong>
+              <span style="color:#5f6368;"> → </span>
+              <strong>{{ selectedForRoute[1].name }}</strong>
+              &nbsp;·&nbsp;{{ routeInfo.duration }}
+              <span style="color:#5f6368;"> ({{ routeInfo.distance }})</span>
+            </span>
+            <button class="route-close" @click="clearRoute">✕</button>
+          </div>
+          <div v-if="selectedForRoute.length === 1 && !routeInfo" class="route-banner" style="background:#fff8e1; border-color:#ffe082;">
+            <span>📍</span>
+            <span>已選「{{ selectedForRoute[0].name }}」，再選一個地點計算駕車時間</span>
+            <button class="route-close" @click="clearRoute">✕</button>
+          </div>
 
-        <div class="chips">
-          <span class="chip" :class="{active: locationFilter==='all'}"        @click="locationFilter='all'">全部 {{ locations.length }}</span>
-          <span class="chip" :class="{active: locationFilter==='fandb'}"      @click="locationFilter='fandb'">🍽️ 食肆</span>
-          <span class="chip" :class="{active: locationFilter==='attraction'}" @click="locationFilter='attraction'">🏔️ 景點</span>
-          <span class="chip" :class="{active: locationFilter==='spa'}"        @click="locationFilter='spa'">🛁 水療</span>
-          <span class="chip" :class="{active: locationFilter==='hotel'}"      @click="locationFilter='hotel'">🏨 酒店</span>
-        </div>
+          <div class="chips">
+            <span class="chip" :class="{active: locationFilter==='all'}"        @click="locationFilter='all'">全部 {{ locations.length }}</span>
+            <span class="chip" :class="{active: locationFilter==='fandb'}"      @click="locationFilter='fandb'">🍽️ 食肆</span>
+            <span class="chip" :class="{active: locationFilter==='attraction'}" @click="locationFilter='attraction'">🏔️ 景點</span>
+            <span class="chip" :class="{active: locationFilter==='spa'}"        @click="locationFilter='spa'">🛁 水療</span>
+            <span class="chip" :class="{active: locationFilter==='hotel'}"      @click="locationFilter='hotel'">🏨 酒店</span>
+          </div>
 
-        <div class="stat-strip">
-          <div class="stat-box"><div class="sv">{{ countByCategory('fandb') }}</div><div class="sl">🍽️ 食肆</div></div>
-          <div class="stat-box"><div class="sv">{{ countByCategory('attraction') }}</div><div class="sl">🏔️ 景點</div></div>
-          <div class="stat-box"><div class="sv">{{ countByCategory('spa') }}</div><div class="sl">🛁 水療</div></div>
-          <div class="stat-box"><div class="sv">{{ countByCategory('hotel') }}</div><div class="sl">🏨 酒店</div></div>
-        </div>
+          <div class="stat-strip">
+            <div class="stat-box"><div class="sv">{{ countByCategory('fandb') }}</div><div class="sl">🍽️ 食肆</div></div>
+            <div class="stat-box"><div class="sv">{{ countByCategory('attraction') }}</div><div class="sl">🏔️ 景點</div></div>
+            <div class="stat-box"><div class="sv">{{ countByCategory('spa') }}</div><div class="sl">🛁 水療</div></div>
+            <div class="stat-box"><div class="sv">{{ countByCategory('hotel') }}</div><div class="sl">🏨 酒店</div></div>
+          </div>
 
-        <button class="btn btn-primary btn-full" @click="showAddLocation=true">＋ 新增地點</button>
+          <button class="btn btn-primary btn-full" @click="showAddLocation=true">＋ 新增地點</button>
 
-        <!-- Placeholder before any category is picked -->
-        <div v-if="!locationFilter" class="empty" style="padding:32px 0;">
-          <div class="ei">👆</div>
-          <p>請選擇上方分類查看地點</p>
-        </div>
+          <!-- Placeholder before any category is picked -->
+          <div v-if="!locationFilter" class="empty" style="padding:32px 0;">
+            <div class="ei">👆</div>
+            <p>請選擇上方分類查看地點</p>
+          </div>
 
-        <div v-else-if="filteredLocations.length === 0" class="empty">
-          <div class="ei">📍</div>
-          <p>未有此分類地點</p>
-        </div>
+          <div v-else-if="filteredLocations.length === 0" class="empty">
+            <div class="ei">📍</div>
+            <p>未有此分類地點</p>
+          </div>
 
-        <div v-else v-for="loc in filteredLocations" :key="loc.id" class="card" style="position:relative;">
-          <!-- In-plan checkmark -->
-          <div v-if="scheduledNames.has(loc.name)" class="in-plan-badge">✓ 已加入</div>
-          <!-- Route select button -->
-          <button class="select-btn" :class="{selected: isSelectedForRoute(loc)}"
-            @click.stop="toggleRouteSelect(loc)" :title="isSelectedForRoute(loc) ? '取消選擇' : '選擇計算路線'">
-            {{ isSelectedForRoute(loc) ? '✓' : '+' }}
-          </button>
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-            <div style="flex:1; min-width:0;">
-              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
-                <span style="font-size:18px;">{{ categoryEmoji(loc.mainCategory) }}</span>
-                <span style="font-size:14px; font-weight:700; color:var(--g-dark);">{{ loc.name }}</span>
+          <div v-else v-for="loc in filteredLocations" :key="loc.id" class="card" style="position:relative;">
+            <!-- In-plan checkmark -->
+            <div v-if="scheduledNames.has(loc.name)" class="in-plan-badge">✓ 已加入</div>
+            <!-- Route select button -->
+            <button class="select-btn" :class="{selected: isSelectedForRoute(loc)}"
+              @click.stop="toggleRouteSelect(loc)" :title="isSelectedForRoute(loc) ? '取消選擇' : '選擇計算路線'">
+              {{ isSelectedForRoute(loc) ? '✓' : '+' }}
+            </button>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
+                  <span style="font-size:18px;">{{ categoryEmoji(loc.mainCategory) }}</span>
+                  <span style="font-size:14px; font-weight:700; color:var(--g-dark);">{{ loc.name }}</span>
+                </div>
+                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:4px;">
+                  <span class="badge" :class="categoryBadge(loc.mainCategory)">{{ categoryLabel(loc.mainCategory) }}</span>
+                  <span v-if="loc.subCategory" class="badge badge-gray">{{ loc.subCategory }}</span>
+                </div>
+                <div v-if="loc.rating" style="font-size:12px; color:var(--g-mid);">
+                  <span style="color:#FBBC04;">⭐</span> {{ loc.rating }}
+                  <span v-if="loc.reviews" style="color:#aaa;"> ({{ loc.reviews }})</span>
+                </div>
+                <div v-if="loc.notes" style="font-size:12px; color:var(--g-mid); margin-top:3px;">{{ loc.notes }}</div>
               </div>
-              <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:4px;">
-                <span class="badge" :class="categoryBadge(loc.mainCategory)">{{ categoryLabel(loc.mainCategory) }}</span>
-                <span v-if="loc.subCategory" class="badge badge-gray">{{ loc.subCategory }}</span>
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <button class="btn btn-outline btn-sm btn-icon" title="修正座標"
+                        @click="openEditLocAddr(loc)">📍</button>
+                <button v-if="loc.userAdded" class="btn btn-red btn-sm btn-icon"
+                        @click="deleteLocation(loc.id)">🗑</button>
               </div>
-              <div v-if="loc.rating" style="font-size:12px; color:var(--g-mid);">
-                <span style="color:#FBBC04;">⭐</span> {{ loc.rating }}
-                <span v-if="loc.reviews" style="color:#aaa;"> ({{ loc.reviews }})</span>
-              </div>
-              <div v-if="loc.notes" style="font-size:12px; color:var(--g-mid); margin-top:3px;">{{ loc.notes }}</div>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <button class="btn btn-outline btn-sm btn-icon" title="修正座標"
-                      @click="openEditLocAddr(loc)">📍</button>
-              <button v-if="loc.userAdded" class="btn btn-red btn-sm btn-icon"
-                      @click="deleteLocation(loc.id)">🗑</button>
             </div>
           </div>
+
+        </div><!-- /loc-list-panel -->
+
+        <!-- Map panel (Leaflet, right side on PC / top on mobile) -->
+        <div class="loc-map-panel">
+          <div id="locationMap" class="location-map"></div>
         </div>
+
       </div>
 
       <!-- ══════════════ TAB: 行程 ══════════════ -->
-      <div v-show="activeTab === 'itinerary'" style="margin: -14px -14px 0;">
+      <div v-show="activeTab === 'itinerary'" class="tab-itinerary-wrap">
 
-        <!-- ① Horizontal day tab bar -->
+        <!-- ① Horizontal day tab bar (full width on both PC & mobile) -->
         <div class="itin-tabs" style="position: sticky; top: 0; z-index: 10;">
           <div v-for="(day, i) in tripDays" :key="day.date"
                class="itin-tab" :class="{active: expandedDay === day.date}"
@@ -762,32 +929,34 @@
           </div>
         </div>
 
-        <!-- ② Persistent day map -->
-        <div id="currentDayMap" class="day-map"
-             v-show="activeDay && dayHasGeoEvents(activeDay)"></div>
+        <!-- ② Content row: list panel | map panel -->
+        <div class="itin-content-row">
 
-        <!-- ③ Day info header -->
-        <div class="day-info-header">
-          <div>
-            <div class="day-num">第{{ activeDayIndex + 1 }}天</div>
-            <div class="day-date">{{ formatDayHeaderFull(expandedDay) }}</div>
-          </div>
-          <div class="dep-time" v-if="activeDayDeparture">
-            出發時間<br><strong>{{ activeDayDeparture }}</strong>
-          </div>
-        </div>
+          <!-- List panel: day header + event list -->
+          <div class="itin-list-panel">
 
-        <!-- ④ Event list (array-order, drag-to-reorder) -->
-        <div style="padding: 8px 14px 14px;" v-if="activeDay">
-          <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
-            <button class="btn btn-green btn-sm" @click.stop="openItinPicker(expandedDay)">＋ 新增下一站</button>
-          </div>
+            <!-- Day info header -->
+            <div class="day-info-header">
+              <div>
+                <div class="day-num">第{{ activeDayIndex + 1 }}天</div>
+                <div class="day-date">{{ formatDayHeaderFull(expandedDay) }}</div>
+              </div>
+              <div class="dep-time" v-if="activeDayDeparture">
+                出發時間<br><strong>{{ activeDayDeparture }}</strong>
+              </div>
+            </div>
 
-          <div v-if="activeDay.events.length === 0" class="empty" style="padding:20px 0;">
-            <p>點擊「＋ 新增下一站」開始規劃</p>
-          </div>
-          <div v-else class="timeline">
-            <template v-for="(ev, idx) in activeDay.events" :key="ev.id">
+            <!-- Event list (array-order, drag-to-reorder) -->
+            <div style="padding: 8px 14px 14px;" v-if="activeDay">
+              <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+                <button class="btn btn-green btn-sm" @click.stop="openItinPicker(expandedDay)">＋ 新增下一站</button>
+              </div>
+
+              <div v-if="activeDay.events.length === 0" class="empty" style="padding:20px 0;">
+                <p>點擊「＋ 新增下一站」開始規劃</p>
+              </div>
+              <div v-else class="timeline">
+                <template v-for="(ev, idx) in activeDay.events" :key="ev.id">
 
               <!-- Route connector with nav button -->
               <div v-if="getRouteToEvent(expandedDay, ev.id)" class="route-conn">
@@ -856,14 +1025,24 @@
                 </div>
               </div>
 
-            </template>
-          </div>
-        </div>
+                </template>
+              </div>
+            </div><!-- /event list -->
 
-      </div>
+          </div><!-- /itin-list-panel -->
+
+          <!-- Map panel (full height on PC, below list on mobile) -->
+          <div class="itin-map-panel">
+            <div id="currentDayMap" class="day-map"
+                 v-show="activeDay && dayHasGeoEvents(activeDay)"></div>
+          </div>
+
+        </div><!-- /itin-content-row -->
+
+      </div><!-- /tab-itinerary-wrap -->
 
       <!-- ══════════════ TAB: 航班 ══════════════ -->
-      <div v-show="activeTab === 'flights'">
+      <div v-show="activeTab === 'flights'" class="tab-simple-wrap">
         <div class="countdown-card">
           <div class="days">{{ daysToFlight }}</div>
           <div class="label">距離出發還有（日）</div>
@@ -899,7 +1078,7 @@
       </div>
 
       <!-- ══════════════ TAB: 分帳 ══════════════ -->
-      <div v-show="activeTab === 'split'">
+      <div v-show="activeTab === 'split'" class="tab-simple-wrap">
 
         <!-- Participants -->
         <div class="sec-title">👥 參與者</div>
@@ -966,7 +1145,7 @@
       </div>
 
       <!-- ══════════════ TAB: 必買 ══════════════ -->
-      <div v-show="activeTab === 'mustbuy'">
+      <div v-show="activeTab === 'mustbuy'" class="tab-simple-wrap">
         <!-- Progress -->
         <div class="card" style="text-align:center; padding:12px 16px;">
           <div style="font-size:13px; font-weight:600; color:var(--g-dark); margin-bottom:4px;">
