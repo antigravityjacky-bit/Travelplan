@@ -739,7 +739,12 @@
               </div>
               <div v-if="loc.notes" style="font-size:12px; color:var(--g-mid); margin-top:3px;">{{ loc.notes }}</div>
             </div>
-            <button v-if="loc.userAdded" class="btn btn-red btn-sm btn-icon" @click="deleteLocation(loc.id)">🗑</button>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <button class="btn btn-outline btn-sm btn-icon" title="修正座標"
+                      @click="openEditLocAddr(loc)">📍</button>
+              <button v-if="loc.userAdded" class="btn btn-red btn-sm btn-icon"
+                      @click="deleteLocation(loc.id)">🗑</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1055,9 +1060,88 @@
         <label>備註（可選）</label>
         <input class="inp" v-model="newLocation.notes" placeholder="備註或價格範圍">
       </div>
+      <!-- Address search -->
+      <div class="input-wrap">
+        <label>地址搜尋（選填，用於地圖定位）</label>
+        <div style="display:flex; gap:6px;">
+          <input class="inp" v-model="newLocAddrQuery"
+                 placeholder="例：89 Treffers Road, Wigram, Christchurch"
+                 @keyup.enter="geocodeNewLocation">
+          <button class="btn btn-primary btn-sm" @click="geocodeNewLocation"
+                  :disabled="newLocGeoStatus==='loading'" style="flex-shrink:0;">
+            <span v-if="newLocGeoStatus==='loading'" class="spinner"></span>
+            <span v-else>🔍</span>
+          </button>
+        </div>
+        <div v-if="newLocGeoStatus==='found' && newLocGeoResult"
+             style="margin-top:6px; font-size:11px; color:var(--g-teal); font-weight:600;">
+          ✓ {{ newLocGeoResult.displayName.split(',').slice(0,3).join(',') }}
+        </div>
+        <div v-if="newLocGeoStatus==='error'"
+             style="margin-top:6px; font-size:11px; color:var(--g-red);">找不到地址，可嘗試英文地址</div>
+      </div>
       <div class="modal-foot">
         <button class="btn btn-outline" @click="showAddLocation=false">取消</button>
         <button class="btn btn-primary" @click="addLocation">新增</button>
+      </div>
+    </div>
+  </div>
+  </transition>
+
+  <!-- ══ MODAL: 修正座標 ══ -->
+  <transition name="fade">
+  <div v-if="showEditLocAddr" class="modal-overlay" @click.self="showEditLocAddr=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>📍 修正座標</h2>
+        <button class="modal-close" @click="showEditLocAddr=false">✕</button>
+      </div>
+      <!-- Current location name -->
+      <div style="font-size:13px; font-weight:700; color:var(--g-dark); margin-bottom:10px;">
+        {{ locations.find(l => l.id === editLocAddrId)?.name }}
+      </div>
+      <!-- Current coords -->
+      <div style="font-size:11px; color:var(--g-mid); margin-bottom:10px;"
+           v-if="locations.find(l => l.id === editLocAddrId)?.lat">
+        現有座標：{{ locations.find(l => l.id === editLocAddrId)?.lat?.toFixed(4) }},
+                  {{ locations.find(l => l.id === editLocAddrId)?.lng?.toFixed(4) }}
+      </div>
+      <div style="font-size:11px; color:var(--g-mid); margin-bottom:10px;" v-else>
+        現有座標：未設定
+      </div>
+      <!-- Address search -->
+      <div class="input-wrap">
+        <label>輸入地址搜尋新座標</label>
+        <div style="display:flex; gap:6px;">
+          <input class="inp" v-model="editLocAddrQuery"
+                 placeholder="例：89 Treffers Road, Wigram, Christchurch"
+                 @keyup.enter="geocodeAddress">
+          <button class="btn btn-primary btn-sm" @click="geocodeAddress"
+                  :disabled="geocodeStatus==='loading'" style="flex-shrink:0;">
+            <span v-if="geocodeStatus==='loading'" class="spinner"></span>
+            <span v-else>🔍</span>
+          </button>
+        </div>
+      </div>
+      <!-- Result -->
+      <div v-if="geocodeStatus==='found' && geocodedResult"
+           style="background:#f0faf0; border:1px solid #c8e6c9; border-radius:8px;
+                  padding:10px; font-size:12px; margin-bottom:12px;">
+        <div style="color:var(--g-teal); font-weight:700; margin-bottom:4px;">✓ 找到地址</div>
+        <div style="color:var(--g-dark);">{{ geocodedResult.displayName.split(',').slice(0,4).join(',') }}</div>
+        <div style="color:var(--g-mid); margin-top:3px;">
+          座標：{{ geocodedResult.lat.toFixed(5) }}, {{ geocodedResult.lng.toFixed(5) }}
+        </div>
+      </div>
+      <div v-if="geocodeStatus==='error'"
+           style="color:var(--g-red); font-size:12px; margin-bottom:10px;">
+        ⚠ 找不到地址，請嘗試英文地址或更詳細的地址
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" @click="showEditLocAddr=false">取消</button>
+        <button class="btn btn-green" :disabled="!geocodedResult" @click="saveLocAddress">
+          儲存座標
+        </button>
       </div>
     </div>
   </div>
@@ -1373,7 +1457,7 @@ const PRESET_LOCATIONS = [
   { id:'l4',  name:"Perky's - Floating Bar",                        mainCategory:'fandb',      subCategory:'酒吧',    rating:4.8, reviews:539,   notes:'NZ$10-20',                userAdded:false, lat:-45.0282, lng:168.6604, wikiTitle:'Queenstown, New Zealand' },
   { id:'l5',  name:'Te Kano Estate',                                mainCategory:'fandb',      subCategory:'釀酒廠',  rating:4.8, reviews:140,   notes:'',                        userAdded:false, lat:-44.6958, lng:169.1497, wikiTitle:'Central Otago wine region' },
   { id:'l34', name:'Jackson Orchards',                              mainCategory:'fandb',      subCategory:'果園',    rating:4.4, reviews:105,   notes:'Central Otago果園',       userAdded:false, lat:-45.0437, lng:169.2034, wikiTitle:'Cromwell, New Zealand' },
-  { id:'l36', name:'Akaroa Salmon',                                 mainCategory:'fandb',      subCategory:'海鮮',    rating:4.5, reviews:620,   notes:'Akaroa港口三文魚直銷',    userAdded:false, lat:-43.8034, lng:172.9688, wikiTitle:'Akaroa' },
+  { id:'l36', name:'Akaroa Salmon',                                 mainCategory:'fandb',      subCategory:'海鮮',    rating:4.5, reviews:620,   notes:'Akaroa港口三文魚直銷',    userAdded:false, lat:-43.5486, lng:172.5917, wikiTitle:'Akaroa' },
   { id:'l37', name:'Mt Cook Alpine Salmon Shop',                    mainCategory:'fandb',      subCategory:'海鮮',    rating:4.6, reviews:415,   notes:'庫克山村三文魚零售店',    userAdded:false, lat:-43.7357, lng:170.0987, wikiTitle:'Aoraki / Mount Cook National Park' },
   { id:'l38', name:'高地鄉村鮭魚 (Highland Salmon)',               mainCategory:'fandb',      subCategory:'海鮮',    rating:4.4, reviews:193,   notes:'Twizel附近Lake Ōhau鮭魚', userAdded:false, lat:-44.2411, lng:169.8682, wikiTitle:'Lake Ōhau' },
   { id:'l39', name:'Fergburger',                                    mainCategory:'fandb',      subCategory:'漢堡',    rating:4.6, reviews:28440, notes:'皇后鎮著名大漢堡，必試',  userAdded:false, lat:-45.0306, lng:168.6614, wikiTitle:'Fergburger' },
@@ -1438,7 +1522,7 @@ function buildTripDays() {
       events: [
         { id:'pf7',  type:'attraction',  time:'08:30', title:'出發去 Akaroa (約 1.5–2 小時)',               location:'基督城 → Akaroa',                 notes:'沿 Banks Peninsula 山路',  prefilled:true },
         { id:'pf8',  type:'attraction',  time:'10:30', title:'Shamarra Alpacas (草泥馬牧場)',               location:'Akaroa, Banks Peninsula',         notes:'提前預約！風景極靚',        prefilled:true, lat:-43.7848, lng:172.9692 },
-        { id:'pf9',  type:'fandb',       time:'13:00', title:'Akaroa Salmon 午餐',                          location:'Akaroa 港口',                     notes:'港口直銷三文魚，超新鮮',    prefilled:true, lat:-43.8034, lng:172.9688 },
+        { id:'pf9',  type:'fandb',       time:'13:00', title:'Akaroa Salmon 午餐',                          location:'89 Treffers Rd, Wigram, Christchurch', notes:'直銷三文魚，超新鮮',        prefilled:true, lat:-43.5486, lng:172.5917 },
         { id:'pf10', type:'attraction',  time:'14:30', title:'Akaroa 小鎮散步',                             location:'Akaroa',                          notes:'法式殖民建築風情小鎮',      prefilled:true, lat:-43.8032, lng:172.9685 },
         { id:'pf11', type:'hotel',       time:'17:00', title:'揸車返基督城過夜',                             location:'基督城',                          notes:'約 1.5–2 小時車程',        prefilled:true },
       ],
@@ -1570,6 +1654,16 @@ createApp({
       locationFilter: '',
       showAddLocation: false,
       newLocation: { name:'', mainCategory:'attraction', subCategory:'', rating:'', notes:'' },
+      // edit address
+      showEditLocAddr: false,
+      editLocAddrId:   '',
+      editLocAddrQuery: '',
+      geocodeStatus:   'idle',   // 'idle'|'loading'|'found'|'error'
+      geocodedResult:  null,     // { lat, lng, displayName }
+      // new-location address search
+      newLocAddrQuery:  '',
+      newLocGeoStatus:  'idle',
+      newLocGeoResult:  null,
 
       // 行程
       tripDays: buildTripDays(),
@@ -2260,7 +2354,7 @@ createApp({
     },
     addLocation() {
       if (!this.newLocation.name.trim()) return;
-      this.locations.push({
+      const loc = {
         id: 'u' + Date.now(),
         name:        this.newLocation.name.trim(),
         mainCategory:this.newLocation.mainCategory,
@@ -2269,14 +2363,77 @@ createApp({
         reviews:     null,
         notes:       this.newLocation.notes.trim(),
         userAdded:   true,
-      });
-      this.newLocation = { name:'', mainCategory:'attraction', subCategory:'', rating:'', notes:'' };
+      };
+      if (this.newLocGeoResult) { loc.lat = this.newLocGeoResult.lat; loc.lng = this.newLocGeoResult.lng; }
+      this.locations.push(loc);
+      this.newLocation     = { name:'', mainCategory:'attraction', subCategory:'', rating:'', notes:'' };
+      this.newLocAddrQuery = '';
+      this.newLocGeoStatus = 'idle';
+      this.newLocGeoResult = null;
       this.showAddLocation = false;
       this.save();
+      this.updateMapMarkers();
     },
     deleteLocation(id) {
       this.locations = this.locations.filter(l => l.id !== id);
       this.save();
+      this.updateMapMarkers();
+    },
+
+    /* ── Edit location address (geocoding) ── */
+    openEditLocAddr(loc) {
+      this.editLocAddrId    = loc.id;
+      this.editLocAddrQuery = '';
+      this.geocodeStatus    = 'idle';
+      this.geocodedResult   = null;
+      this.showEditLocAddr  = true;
+    },
+    async geocodeAddress() {
+      const q = this.editLocAddrQuery.trim();
+      if (!q) return;
+      this.geocodeStatus  = 'loading';
+      this.geocodedResult = null;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+        const res  = await fetch(url, { headers: { 'Accept-Language': 'zh-HK,en', 'User-Agent': 'NZTravelPlan/1.0' } });
+        const data = await res.json();
+        if (data.length) {
+          this.geocodedResult = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), displayName: data[0].display_name };
+          this.geocodeStatus  = 'found';
+        } else {
+          this.geocodeStatus = 'error';
+        }
+      } catch (_) { this.geocodeStatus = 'error'; }
+    },
+    saveLocAddress() {
+      if (!this.geocodedResult) return;
+      const loc = this.locations.find(l => l.id === this.editLocAddrId);
+      if (loc) {
+        loc.lat = this.geocodedResult.lat;
+        loc.lng = this.geocodedResult.lng;
+        this.save();
+        this.updateMapMarkers();
+      }
+      this.showEditLocAddr = false;
+    },
+
+    /* ── New location address search ── */
+    async geocodeNewLocation() {
+      const q = this.newLocAddrQuery.trim();
+      if (!q) return;
+      this.newLocGeoStatus = 'loading';
+      this.newLocGeoResult  = null;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+        const res  = await fetch(url, { headers: { 'Accept-Language': 'zh-HK,en', 'User-Agent': 'NZTravelPlan/1.0' } });
+        const data = await res.json();
+        if (data.length) {
+          this.newLocGeoResult  = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), displayName: data[0].display_name };
+          this.newLocGeoStatus  = 'found';
+        } else {
+          this.newLocGeoStatus = 'error';
+        }
+      } catch (_) { this.newLocGeoStatus = 'error'; }
     },
 
     /* ── itinerary ── */
