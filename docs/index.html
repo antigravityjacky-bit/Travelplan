@@ -322,9 +322,30 @@
       background: #e8eaf0;
     }
 
+    /* ── In-plan badge on location cards ── */
+    .in-plan-badge {
+      position: absolute;
+      top: 8px; right: 40px;
+      background: var(--g-teal);
+      color: #fff;
+      border-radius: 10px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* ── Drag-and-drop ── */
+    .tl-item[draggable="true"] { cursor: grab; }
+    .tl-item[draggable="true"]:active { cursor: grabbing; }
+    .tl-item.dragging { opacity: .35; }
+    .tl-item.drag-over > .card { border-color: var(--g-teal); box-shadow: 0 0 0 2px rgba(0,191,192,.35); }
+
     /* ── Flight card ── */
     .flight-card {
-      background: linear-gradient(135deg, var(--g-blue) 0%, #1a73e8 100%);
+      background: linear-gradient(135deg, var(--g-teal) 0%, #008a8b 100%);
       color: #fff;
       border-radius: 16px;
       padding: 16px;
@@ -667,11 +688,11 @@
         </div>
 
         <div class="chips">
-          <span class="chip" :class="{active: locationFilter==='all'}"    @click="locationFilter='all'">全部 {{ locations.length }}</span>
-          <span class="chip" :class="{active: locationFilter==='fandb'}"  @click="locationFilter='fandb'">🍽️ 食肆</span>
+          <span class="chip" :class="{active: locationFilter==='all'}"        @click="locationFilter='all'">全部 {{ locations.length }}</span>
+          <span class="chip" :class="{active: locationFilter==='fandb'}"      @click="locationFilter='fandb'">🍽️ 食肆</span>
           <span class="chip" :class="{active: locationFilter==='attraction'}" @click="locationFilter='attraction'">🏔️ 景點</span>
-          <span class="chip" :class="{active: locationFilter==='spa'}"    @click="locationFilter='spa'">🛁 水療</span>
-          <span class="chip" :class="{active: locationFilter==='hotel'}"  @click="locationFilter='hotel'">🏨 酒店</span>
+          <span class="chip" :class="{active: locationFilter==='spa'}"        @click="locationFilter='spa'">🛁 水療</span>
+          <span class="chip" :class="{active: locationFilter==='hotel'}"      @click="locationFilter='hotel'">🏨 酒店</span>
         </div>
 
         <div class="stat-strip">
@@ -683,12 +704,20 @@
 
         <button class="btn btn-primary btn-full" @click="showAddLocation=true">＋ 新增地點</button>
 
-        <div v-if="filteredLocations.length === 0" class="empty">
+        <!-- Placeholder before any category is picked -->
+        <div v-if="!locationFilter" class="empty" style="padding:32px 0;">
+          <div class="ei">👆</div>
+          <p>請選擇上方分類查看地點</p>
+        </div>
+
+        <div v-else-if="filteredLocations.length === 0" class="empty">
           <div class="ei">📍</div>
           <p>未有此分類地點</p>
         </div>
 
-        <div v-for="loc in filteredLocations" :key="loc.id" class="card">
+        <div v-else v-for="loc in filteredLocations" :key="loc.id" class="card" style="position:relative;">
+          <!-- In-plan checkmark -->
+          <div v-if="scheduledNames.has(loc.name)" class="in-plan-badge">✓ 已加入</div>
           <!-- Route select button -->
           <button class="select-btn" :class="{selected: isSelectedForRoute(loc)}"
             @click.stop="toggleRouteSelect(loc)" :title="isSelectedForRoute(loc) ? '取消選擇' : '選擇計算路線'">
@@ -743,17 +772,17 @@
           </div>
         </div>
 
-        <!-- ④ Event list -->
+        <!-- ④ Event list (array-order, drag-to-reorder) -->
         <div style="padding: 8px 14px 14px;" v-if="activeDay">
           <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
             <button class="btn btn-green btn-sm" @click.stop="openItinPicker(expandedDay)">＋ 新增下一站</button>
           </div>
 
-          <div v-if="sortedEvents(activeDay.events).length === 0" class="empty" style="padding:20px 0;">
+          <div v-if="activeDay.events.length === 0" class="empty" style="padding:20px 0;">
             <p>點擊「＋ 新增下一站」開始規劃</p>
           </div>
           <div v-else class="timeline">
-            <template v-for="(ev, idx) in sortedEvents(activeDay.events)" :key="ev.id">
+            <template v-for="(ev, idx) in activeDay.events" :key="ev.id">
 
               <!-- Route connector with nav button -->
               <div v-if="getRouteToEvent(expandedDay, ev.id)" class="route-conn">
@@ -766,14 +795,24 @@
                 <a :href="getNavUrl(expandedDay, ev.id)" target="_blank" class="route-nav-btn">➤</a>
               </div>
 
-              <!-- Event card -->
-              <div class="tl-item">
+              <!-- Event card — draggable -->
+              <div class="tl-item"
+                   draggable="true"
+                   :class="{ dragging: dragSrcId === ev.id, 'drag-over': dragOverId === ev.id }"
+                   @dragstart="onDragStart($event, ev.id)"
+                   @dragover.prevent="dragOverId = ev.id"
+                   @dragleave="dragOverId = null"
+                   @drop.prevent="onDrop(expandedDay, ev.id)"
+                   @dragend="dragSrcId = null; dragOverId = null">
                 <div class="tl-dot"
                      :class="ev.type==='flight'?'blue':ev.type==='hotel'?'yellow':''">
-                  {{ getEventIndex(expandedDay, ev.id) }}
+                  {{ idx + 1 }}
                 </div>
                 <div class="card card-sm" style="margin-bottom:6px;">
                   <div style="display:flex; align-items:flex-start; gap:8px;">
+                    <!-- Drag handle -->
+                    <div style="flex-shrink:0; color:var(--g-border); font-size:16px; padding-top:2px;
+                                cursor:grab; user-select:none;" title="拖動排序">⠿</div>
                     <!-- Photo -->
                     <img v-if="getEventPhoto(ev)"
                          :src="getEventPhoto(ev)"
@@ -800,10 +839,14 @@
                         停留 {{ getDwellTime(expandedDay, ev.id) }}
                       </div>
                     </div>
-                    <!-- Delete -->
-                    <button v-if="!ev.prefilled"
-                            class="btn btn-red btn-sm btn-icon"
-                            @click="deleteEvent(expandedDay, ev.id)">🗑</button>
+                    <!-- Edit + Delete -->
+                    <div style="display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+                      <button class="btn btn-outline btn-sm btn-icon"
+                              style="font-size:12px;"
+                              @click="openEditEvent(expandedDay, ev)">✏️</button>
+                      <button class="btn btn-red btn-sm btn-icon"
+                              @click="deleteEvent(expandedDay, ev.id)">🗑</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1111,6 +1154,38 @@
                 @click="switchToManualMode">✏️ 手動輸入文字</button>
       </div>
 
+    </div>
+  </div>
+  </transition>
+
+  <!-- ══ MODAL: 編輯活動 ══ -->
+  <transition name="fade">
+  <div v-if="showEditEvent" class="modal-overlay" @click.self="showEditEvent=false">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>✏️ 編輯活動</h2>
+        <button class="modal-close" @click="showEditEvent=false">✕</button>
+      </div>
+      <div class="input-wrap">
+        <label>時間</label>
+        <input class="inp" type="time" v-model="editForm.time">
+      </div>
+      <div class="input-wrap">
+        <label>活動名稱</label>
+        <input class="inp" v-model="editForm.title" placeholder="活動名稱">
+      </div>
+      <div class="input-wrap">
+        <label>地點（可選）</label>
+        <input class="inp" v-model="editForm.location" placeholder="地點">
+      </div>
+      <div class="input-wrap">
+        <label>備註（可選）</label>
+        <input class="inp" v-model="editForm.notes" placeholder="備註">
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" @click="showEditEvent=false">取消</button>
+        <button class="btn btn-green" @click="saveEditEvent">儲存</button>
+      </div>
     </div>
   </div>
   </transition>
@@ -1492,7 +1567,7 @@ createApp({
 
       // 地點
       locations: JSON.parse(JSON.stringify(PRESET_LOCATIONS)),
-      locationFilter: 'all',
+      locationFilter: '',
       showAddLocation: false,
       newLocation: { name:'', mainCategory:'attraction', subCategory:'', rating:'', notes:'' },
 
@@ -1502,6 +1577,14 @@ createApp({
       newEvent: { time:'', title:'', location:'', notes:'' },
       photoCache: {},   // wikiTitle → image URL (null = loading/failed)
       routeCache: {},   // 'lat,lng|lat,lng' → { duration, distance }
+      // drag-and-drop
+      dragSrcId: null,
+      dragOverId: null,
+      // inline edit
+      showEditEvent: false,
+      editEventDate: '',
+      editEventId: '',
+      editForm: { time:'', title:'', location:'', notes:'' },
 
       // 航班
       flights: FLIGHTS,
@@ -1530,8 +1613,14 @@ createApp({
       return { local:'本地儲存', syncing:'同步中...', synced:'雲端已同步', error:'同步錯誤' }[this.syncStatus] || '本地';
     },
     filteredLocations() {
+      if (!this.locationFilter) return [];
       if (this.locationFilter === 'all') return this.locations;
       return this.locations.filter(l => l.mainCategory === this.locationFilter);
+    },
+    scheduledNames() {
+      const s = new Set();
+      this.tripDays.forEach(d => d.events.forEach(e => { if (e.title) s.add(e.title); }));
+      return s;
     },
     filteredMustBuy() {
       if (this.mustBuyFilter === 'all') return this.mustBuyItems;
@@ -1956,7 +2045,7 @@ createApp({
     loadDayData(date) {
       const day = this.tripDays.find(d => d.date === date);
       if (!day) return;
-      const geoEvs = this.sortedEvents(day.events).filter(e => e.lat && e.lng);
+      const geoEvs = day.events.filter(e => e.lat && e.lng);
       // init map
       this.initDayMap(date, geoEvs);
       // routes between consecutive geo stops
@@ -2006,13 +2095,13 @@ createApp({
     getRouteToEvent(dayDate, evId) {
       const day = this.tripDays.find(d => d.date === dayDate);
       if (!day) return null;
-      const sorted = this.sortedEvents(day.events);
-      const idx = sorted.findIndex(e => e.id === evId);
+      const evs = day.events;
+      const idx = evs.findIndex(e => e.id === evId);
       if (idx <= 0) return null;
-      const cur = sorted[idx];
+      const cur = evs[idx];
       if (!cur.lat || !cur.lng) return null;
       for (let i = idx - 1; i >= 0; i--) {
-        const prev = sorted[i];
+        const prev = evs[i];
         if (prev.lat && prev.lng) {
           const key = `${prev.lat},${prev.lng}|${cur.lat},${cur.lng}`;
           return this.routeCache[key] || null;
@@ -2120,17 +2209,17 @@ createApp({
     getEventIndex(dayDate, evId) {
       const day = this.tripDays.find(d => d.date === dayDate);
       if (!day) return '';
-      return this.sortedEvents(day.events).findIndex(e => e.id === evId) + 1;
+      return day.events.findIndex(e => e.id === evId) + 1;
     },
     getDwellTime(dayDate, evId) {
       const day = this.tripDays.find(d => d.date === dayDate);
       if (!day) return '';
-      const sorted = this.sortedEvents(day.events);
-      const idx = sorted.findIndex(e => e.id === evId);
+      const evs = day.events;
+      const idx = evs.findIndex(e => e.id === evId);
       if (idx < 0) return '';
-      const cur = sorted[idx];
+      const cur = evs[idx];
       if (!cur.time) return '';
-      const next = sorted.slice(idx + 1).find(e => e.time);
+      const next = evs.slice(idx + 1).find(e => e.time);
       if (!next) return '';
       const [ch, cm] = cur.time.split(':').map(Number);
       const [nh, nm] = next.time.split(':').map(Number);
@@ -2144,12 +2233,12 @@ createApp({
     getNavUrl(dayDate, evId) {
       const day = this.tripDays.find(d => d.date === dayDate);
       if (!day) return '#';
-      const sorted = this.sortedEvents(day.events);
-      const idx = sorted.findIndex(e => e.id === evId);
-      const cur = sorted[idx];
+      const evs = day.events;
+      const idx = evs.findIndex(e => e.id === evId);
+      const cur = evs[idx];
       if (!cur?.lat || !cur?.lng) return '#';
       for (let i = idx - 1; i >= 0; i--) {
-        const prev = sorted[i];
+        const prev = evs[i];
         if (prev.lat && prev.lng)
           return `https://www.google.com/maps/dir/${prev.lat},${prev.lng}/${cur.lat},${cur.lng}`;
       }
@@ -2202,8 +2291,53 @@ createApp({
     },
     deleteEvent(date, id) {
       const day = this.tripDays.find(d => d.date === date);
-      if (day) day.events = day.events.filter(e => e.id !== id);
+      if (day) {
+        day.events = day.events.filter(e => e.id !== id);
+        this.routeCache = {};   // invalidate cached routes for this day
+        this.$nextTick(() => this.loadDayData(date));
+      }
       this.save();
+    },
+    openEditEvent(date, ev) {
+      this.editEventDate = date;
+      this.editEventId   = ev.id;
+      this.editForm = { time: ev.time || '', title: ev.title || '', location: ev.location || '', notes: ev.notes || '' };
+      this.showEditEvent = true;
+    },
+    saveEditEvent() {
+      const day = this.tripDays.find(d => d.date === this.editEventDate);
+      if (!day) return;
+      const ev = day.events.find(e => e.id === this.editEventId);
+      if (ev) {
+        ev.time     = this.editForm.time;
+        ev.title    = this.editForm.title.trim();
+        ev.location = this.editForm.location.trim();
+        ev.notes    = this.editForm.notes.trim();
+      }
+      this.showEditEvent = false;
+      this.save();
+    },
+    onDragStart(e, evId) {
+      this.dragSrcId = evId;
+      e.dataTransfer.effectAllowed = 'move';
+    },
+    onDrop(date, targetId) {
+      if (!this.dragSrcId || this.dragSrcId === targetId) {
+        this.dragSrcId = null; this.dragOverId = null; return;
+      }
+      const day = this.tripDays.find(d => d.date === date);
+      if (!day) return;
+      const evs = day.events;
+      const srcIdx = evs.findIndex(e => e.id === this.dragSrcId);
+      const tgtIdx = evs.findIndex(e => e.id === targetId);
+      if (srcIdx < 0 || tgtIdx < 0) return;
+      const [moved] = evs.splice(srcIdx, 1);
+      evs.splice(tgtIdx, 0, moved);
+      this.dragSrcId = null;
+      this.dragOverId = null;
+      this.routeCache = {};   // reorder changes all legs
+      this.save();
+      this.$nextTick(() => this.loadDayData(date));
     },
 
     /* ── bill split ── */
